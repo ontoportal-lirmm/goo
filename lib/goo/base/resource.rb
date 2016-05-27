@@ -189,7 +189,7 @@ module Goo
 
       def bring(*opts)
         opts.each do |k|
-          # set the instance of the variable we want to bring to nil
+          # set the instance of the variable we want to bring to nil (just in case)
           # example: if we want to bring submissions from an ontology, it first set those submissions to nil
           if k.kind_of?(Hash)
             k.each do |k2,v|
@@ -205,11 +205,13 @@ module Goo
             self.instance_variable_set("@#{k}",nil)
           end
         end
+        # prepare the query (Goo::Base::Where object);
         query = self.class.where.models([self]).include(*opts)
         if self.class.collection_opts.instance_of?(Symbol)
           collection_attribute = self.class.collection_opts
           query.in(self.send("#{collection_attribute}"))
         end
+        # process the query
         query.all
         self
       end
