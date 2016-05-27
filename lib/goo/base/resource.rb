@@ -211,7 +211,7 @@ module Goo
           collection_attribute = self.class.collection_opts
           query.in(self.send("#{collection_attribute}"))
         end
-        # process the query
+        # process the query:
         query.all
         self
       end

@@ -238,6 +238,8 @@ module Goo
         end
       end
 
+      ##
+      # Call model_load_sliced to load a model from the triplestore
       def self.model_load(*options)
         options = options.last
         if options[:models] and options[:models].is_a?(Array) and\
@@ -369,6 +371,7 @@ module Goo
 
         variables = [:id]
 
+        ## Generate the query?
         query_options = {}
         #TODO: breaks the reasoner
         patterns = [[ :id ,RDF.type, klass.uri_type(collection)]]
@@ -422,6 +425,7 @@ module Goo
             incl.each do |attr|
               graph, pattern = query_pattern(klass,attr,collection: collection)
               add_rules(attr,klass,query_options)
+              # When doing a "bring" the poorly written optional patterns come from here
               optional_patterns << pattern if pattern
               graphs << graph if graph && (!klass.collection_opts || klass.inverse?(attr))
             end
@@ -512,6 +516,7 @@ module Goo
           variables << :some_type
         end
 
+        # the select query is constructed here!
         select = client.select(*variables).distinct()
         variables.delete :some_type
 
@@ -583,6 +588,7 @@ module Goo
         expand_equivalent_predicates(select,equivalent_predicates)
         var_set_hash = {}
 
+        # iterate other solutions of the select query
         select.each_solution do |sol|
           next if sol[:some_type] && klass.type_uri(collection) != sol[:some_type]
           if count

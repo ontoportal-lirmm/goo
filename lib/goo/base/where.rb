@@ -131,6 +131,10 @@ module Goo
         return process_query_intl(count=count)
       end
 
+      ##
+      # Method to process the query to retrieve the model data
+      # it calls Goo::SPARQL::Queries.model_load(options_load) where options_load is a hash with the object to load
+      # Ex: the OntologySubmission object with the attr to include or the contact
       def process_query_intl(count=false)
 
         if @order_by && !@indexing
