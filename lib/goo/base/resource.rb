@@ -189,6 +189,8 @@ module Goo
 
       def bring(*opts)
         opts.each do |k|
+          # set the instance of the variable we want to bring to nil
+          # example: if we want to bring submissions from an ontology, it first set those submissions to nil
           if k.kind_of?(Hash)
             k.each do |k2,v|
               if self.class.handler?(k2)
