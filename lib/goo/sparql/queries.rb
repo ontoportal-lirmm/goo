@@ -371,7 +371,7 @@ module Goo
 
         variables = [:id]
 
-        ## Generate the query?
+        ## Generate the query
         query_options = {}
         #TODO: breaks the reasoner
         patterns = [[ :id ,RDF.type, klass.uri_type(collection)]]
@@ -383,7 +383,9 @@ module Goo
         unmapped = nil
         bnode_extraction = nil
         if incl
+          # In case there are "include" properties
           if incl.first and incl.first.is_a?(Hash) and incl.first.include?:bnode
+            # To include blank node (doesn't seems to be really used...)
             #limitation only one level BNODE
             bnode_conf = incl.first[:bnode]
             klass_attr = bnode_conf.keys.first
@@ -395,6 +397,8 @@ module Goo
               patterns << [bnode, klass.attribute_uri(in_bnode_attr,collection), in_bnode_attr]
             end
           elsif incl.first == :unmapped
+            # To get attribute that have not been mapped to the object (to get all class properties for example!)
+            # https://github.com/ncbo/goo#working-with-unknown-attributes---schemaless-objects
             #a filter with for ?predicate will be included
             if predicates_map
               variables = [:id, :object, :bind_as]
@@ -408,27 +412,35 @@ module Goo
             end
             unmapped = true
           else
+            # includes are generated here
             #make it deterministic
             incl = incl.to_a
             incl_direct = incl.select { |a| a.instance_of?(Symbol) }
-            variables.concat(incl_direct)
+            #variables.concat(incl_direct)
             incl_embed = incl.select { |a| a.instance_of?(Hash) }
             raise ArgumentError, "Not supported case for embed" if incl_embed.length > 1
             incl.delete_if { |a| !a.instance_of?(Symbol) }
 
             if incl_embed.length > 0
+              # just get keys for embedded variables to add it to the included properties to retrieve
               incl_embed = incl_embed.first
               embed_variables = incl_embed.keys.sort
-              variables.concat(embed_variables)
+              #variables.concat(embed_variables)
               incl.concat(embed_variables)
             end
+            variables.concat([:attributeProperty, :attributeObject])
+            array_includes_filter = []
             incl.each do |attr|
               graph, pattern = query_pattern(klass,attr,collection: collection)
+              # pattern is an array of this form: [:id, #<RDF::URI:0x3fc384d47ad8(http://data.bioontology.org/metadata/firstName)>, :firstName]
               add_rules(attr,klass,query_options)
               # When doing a "bring" the poorly written optional patterns come from here
-              optional_patterns << pattern if pattern
+              #optional_patterns << pattern if pattern
+              array_includes_filter << pattern[1] # just take the URI of the attribute property
               graphs << graph if graph && (!klass.collection_opts || klass.inverse?(attr))
             end
+            # TODO: POUR CORRIGER CA IL FAUT voir l'exemple de SPARQL query sur dropbox CORRECTION BUG SPARQL.sparql
+            # ne plus ajouter les variable include dans "variables", à la place on met ?attributeProperty ?attributeObject
           end
         end
 
@@ -532,6 +544,15 @@ module Goo
         end
 
         select.filter(filter_id_str)
+
+        # Add the attributes properties to the filter (to retrieve all the attributes we ask for)
+        if !array_includes_filter.nil? && array_includes_filter.length > 0
+          filter_predicates = array_includes_filter.map { |p| "?attributeProperty = #{p.to_ntriples}" }
+          filter_predicates = filter_predicates.join " || "
+          select.filter(filter_predicates)
+        end
+        puts "seeeeeelect #{select}"
+        # TODO: c'est un bon début maintenant faut recup correctement le tout !!!!
 
         #if unmapped && predicates && predicates.length > 0
         #  filter_predicates = predicates.map { |p| "?predicate = #{p.to_ntriples}" }
