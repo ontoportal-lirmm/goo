@@ -950,7 +950,7 @@ module Goo
             # Go through all attr we had to include
             id_array.each do |model_id|
               # Go through all models queried
-              if !models_by_id[model_id].loaded_attributes.include?(attr_to_incl)
+              if !models_by_id[model_id].loaded_attributes.include?(attr_to_incl) && models_by_id[model_id].respond_to?(attr_to_incl)
                 # If the asked attr has not been loaded then it is set to nil
                 models_by_id[model_id].send("#{attr_to_incl}=", nil, on_load: true)
               end
