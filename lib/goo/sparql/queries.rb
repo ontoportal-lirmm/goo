@@ -51,6 +51,27 @@ module Goo
         end
       end
 
+      # Expand equivalent predicate for attribute that are retrieved using filter (the smart way to retrieve...)
+      def self.expand_equivalent_predicates_filter(eq_p, array_includes_filter, uri_properties_hash)
+        array_includes_filter_out = array_includes_filter.dup
+        if eq_p && eq_p.length > 0
+          if array_includes_filter
+            array_includes_filter.each do |predicate_filter|
+              if predicate_filter && predicate_filter.is_a?(RDF::URI)
+                if eq_p.include?(predicate_filter.to_s)
+                  eq_p[predicate_filter.to_s].each do |predicate_mapping|
+                    pred_map_uri = RDF::URI.new(predicate_mapping)
+                    array_includes_filter_out << pred_map_uri
+                    uri_properties_hash[pred_map_uri] = uri_properties_hash[predicate_filter]
+                  end
+                end
+              end
+            end
+          end
+        end
+        return array_includes_filter_out, uri_properties_hash
+      end
+
       def self.duplicate_attribute_value?(model,attr,store=:main)
         value = model.instance_variable_get("@#{attr}")
         if !value.instance_of? Array
@@ -452,6 +473,9 @@ module Goo
             end
             # TODO: POUR CORRIGER CA IL FAUT voir l'exemple de SPARQL query sur dropbox CORRECTION BUG SPARQL.sparql
             # ne plus ajouter les variable include dans "variables", à la place on met ?attributeProperty ?attributeObject
+
+            array_includes_filter, uri_properties_hash = expand_equivalent_predicates_filter(equivalent_predicates, array_includes_filter, uri_properties_hash)
+            array_includes_filter.uniq!
           end
         end
 
