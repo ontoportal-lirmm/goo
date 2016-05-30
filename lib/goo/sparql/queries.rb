@@ -442,7 +442,7 @@ module Goo
                 # In case we have an inverse attribute to retrieve (i.e.: submissions linked to an ontology)
                 inversed = true
                 variables.concat([:inverseAttributeObject])
-                optional_patterns << [:inverseAttributeObject, :inverseAttributeProperty, :id]
+                optional_patterns << [:inverseAttributeObject, :attributeProperty, :id]
               end
               # When doing a "bring" the poorly written optional patterns come from here
               #optional_patterns << pattern if pattern
@@ -562,8 +562,6 @@ module Goo
           filter_predicates = filter_predicates.join " || "
           select.filter(filter_predicates)
         end
-        puts "seeeeeelect #{select}"
-        # TODO: c'est un bon début maintenant faut recup correctement le tout !!!!
 
         #if unmapped && predicates && predicates.length > 0
         #  filter_predicates = predicates.map { |p| "?predicate = #{p.to_ntriples}" }
@@ -619,6 +617,9 @@ module Goo
 
         expand_equivalent_predicates(select,equivalent_predicates)
         var_set_hash = {}
+        id_array = []
+
+        puts "seeeeeelect #{select}"
 
         # iterate other solutions of the select query
         select.each_solution do |sol|
@@ -628,6 +629,7 @@ module Goo
           end
           found.add(sol[:id])
           id = sol[:id]
+          id_array << id
           if bnode_extraction
             struct = klass.range(bnode_extraction).new
             variables.each do |v|
@@ -677,6 +679,7 @@ module Goo
             # Retrieve all included attributes
             #attr_retrieved = uri_properties_hash[sol[:attributeProperty]]
 
+=begin
             if !sol[:attributeObject].nil?
               if sol[:attributeObject].kind_of?(RDF::Literal)
                 key = "#{uri_properties_hash[sol[:attributeProperty]]}#__#{id.to_s}"
@@ -693,8 +696,120 @@ module Goo
               models_by_id[id].send("#{uri_properties_hash[sol[:attributeProperty]]}=", [sol[:inverseAttributeObject]], on_load: true)
             end
             puts models_by_id[id].submissions
+=end
+
+            v = uri_properties_hash[sol[:attributeProperty]]
+            if !sol[:attributeObject].nil?
+              object = sol[:attributeObject]
+            elsif !sol[:inverseAttributeObject].nil?
+              object = sol[:inverseAttributeObject]
+            end
+
+            if (v != :id) && !all_attributes.include?(v)
+              if aggregate_projections && aggregate_projections.include?(v)
+                conf = aggregate_projections[v]
+                if models_by_id[id].respond_to?:add_aggregate
+                models_by_id[id].add_aggregate(conf[1], conf[0], sol[v].object)
+                else
+                  (models_by_id[id].aggregates ||= []) <<
+                      Goo::Base::AGGREGATE_VALUE.new(conf[1], conf[0], sol[v].object)
+                end
+              end
+              #TODO otther schemaless things
+              next
+            end
+            #group for multiple values
+
+            #bnodes
+            if object.kind_of?(RDF::Node) && object.anonymous? && incl.include?(v)
+              range = klass.range(v)
+              if range.respond_to?(:new)
+                objects_new[object] = BNODES_TUPLES.new(id,v)
+              end
+              next
+            end
+
+            if object and !(object.kind_of? RDF::URI)
+              object = object.object
+            end
+
+            #dependent model creation
+            if object.kind_of?(RDF::URI) && v != :id
+              range_for_v = klass.range(v)
+              if range_for_v
+                if objects_new.include?(object)
+                  object = objects_new[object]
+                else
+                  unless range_for_v.inmutable?
+                    pre_val = nil
+                    if models_by_id[id] &&
+                        ((models_by_id[id].respond_to?(:klass) && models_by_id[id]) ||
+                            models_by_id[id].loaded_attributes.include?(v))
+                      if !read_only
+                        pre_val = models_by_id[id].instance_variable_get("@#{v}")
+                      else
+                        pre_val = models_by_id[id][v]
+                      end
+                      if pre_val.is_a?(Array)
+                        pre_val = pre_val.select { |x| x.id == object }.first
+                      end
+                    end
+                    if !read_only
+                      object = pre_val ? pre_val : klass.range_object(v,object)
+                      objects_new[object.id] = object
+                    else
+                      #depedent read only
+                      struct = pre_val ? pre_val : embed_struct[v].new
+                      struct.id = object
+                      struct.klass = klass.range(v)
+                      objects_new[struct.id] = struct
+                      object = struct
+                    end
+                  else
+                    object = range_for_v.find(object).first
+                  end
+                end
+              end
+            end
+
+            if list_attributes.include?(v)
+              # To handle attr that are lists
+              pre = klass_struct ? models_by_id[id][v] :
+                  models_by_id[id].instance_variable_get("@#{v}")
+              if object.nil? && pre.nil?
+                object = []
+              elsif object.nil? && !pre.nil?
+                object = pre
+              elsif object
+                object = !pre ? [object] : (pre.dup << object)
+                object.uniq!
+              end
+            end
+            if models_by_id[id].respond_to?(:klass)
+              unless object.nil? && !models_by_id[id][v].nil?
+                models_by_id[id][v] = object
+              end
+            else
+              unless models_by_id[id].class.handler?(v)
+                unless object.nil? && !models_by_id[id].instance_variable_get("@#{v.to_s}").nil?
+                  if v != :id
+                    # if multiple language values are included for a given property, set the
+                    # corresponding model attribute to the English language value - NCBO-1662
+                    if sol[v].kind_of?(RDF::Literal)
+                      key = "#{v}#__#{id.to_s}"
+                      models_by_id[id].send("#{v}=", object, on_load: true) unless var_set_hash[key]
+                      lang = sol[v].language
+                      var_set_hash[key] = true if lang == :EN || lang == :en
+                    else
+                      models_by_id[id].send("#{v}=", object, on_load: true)
+                    end
+                  end
+                end
+              end
+            end
           end
 
+=begin
           variables.each do |v|
             next if v == :id and models_by_id.include?(id)
             if (v != :id) && !all_attributes.include?(v)
@@ -800,7 +915,25 @@ module Goo
               end
             end
           end
+=end
+
         end
+
+        if !incl.nil?
+          # Here we are setting all attribute that have been included but not found in the triplestore to loaded but nil
+          id_array.uniq!
+          incl.each do |attr_to_incl|
+            # Go through all attr we had to include
+            id_array.each do |model_id|
+              # Go through all models queried
+              if !models_by_id[model_id].loaded_attributes.include?(attr_to_incl)
+                # If the asked attr has not been loaded then it is set to nil
+                models_by_id[model_id].send("#{attr_to_incl}=", nil, on_load: true)
+              end
+            end
+          end
+        end
+
         return models_by_id if bnode_extraction
 
         collection_value = nil
