@@ -429,14 +429,25 @@ module Goo
               incl.concat(embed_variables)
             end
             variables.concat([:attributeProperty, :attributeObject])
+            # TODO: est-ce vraiment nécessaire d'utiliser optional ici ?
+            optional_patterns = [[:id, :attributeProperty, :attributeObject]]
             array_includes_filter = []
+            uri_properties_hash = {}  # hash that contains "URI of the property => attribute label"
+            inversed = false
             incl.each do |attr|
               graph, pattern = query_pattern(klass,attr,collection: collection)
               # pattern is an array of this form: [:id, #<RDF::URI:0x3fc384d47ad8(http://data.bioontology.org/metadata/firstName)>, :firstName]
               add_rules(attr,klass,query_options)
+              if klass.attributes(:all).include?(attr) && klass.inverse?(attr) && inversed == false
+                # In case we have an inverse attribute to retrieve (i.e.: submissions linked to an ontology)
+                inversed = true
+                variables.concat([:inverseAttributeObject])
+                optional_patterns << [:inverseAttributeObject, :inverseAttributeProperty, :id]
+              end
               # When doing a "bring" the poorly written optional patterns come from here
               #optional_patterns << pattern if pattern
               array_includes_filter << pattern[1] # just take the URI of the attribute property
+              uri_properties_hash[pattern[1]] = attr
               graphs << graph if graph && (!klass.collection_opts || klass.inverse?(attr))
             end
             # TODO: POUR CORRIGER CA IL FAUT voir l'exemple de SPARQL query sur dropbox CORRECTION BUG SPARQL.sparql
@@ -545,7 +556,7 @@ module Goo
 
         select.filter(filter_id_str)
 
-        # Add the attributes properties to the filter (to retrieve all the attributes we ask for)
+        # Add the included attributes properties to the filter (to retrieve all the attributes we ask for)
         if !array_includes_filter.nil? && array_includes_filter.length > 0
           filter_predicates = array_includes_filter.map { |p| "?attributeProperty = #{p.to_ntriples}" }
           filter_predicates = filter_predicates.join " || "
@@ -661,6 +672,29 @@ module Goo
             end
             next
           end
+
+          if !sol[:attributeProperty].nil?
+            # Retrieve all included attributes
+            #attr_retrieved = uri_properties_hash[sol[:attributeProperty]]
+
+            if !sol[:attributeObject].nil?
+              if sol[:attributeObject].kind_of?(RDF::Literal)
+                key = "#{uri_properties_hash[sol[:attributeProperty]]}#__#{id.to_s}"
+                models_by_id[id].send("#{uri_properties_hash[sol[:attributeProperty]]}=", sol[:attributeObject], on_load: true) unless var_set_hash[key]
+                puts models_by_id[id].acronym
+                lang = sol[:attributeObject].language
+                var_set_hash[key] = true if lang == :EN || lang == :en
+              else
+                puts "#{uri_properties_hash[sol[:attributeProperty]]} toto = #{sol[:attributeObject]}"
+                models_by_id[id].send("#{uri_properties_hash[sol[:attributeProperty]]}=", sol[:attributeObject], on_load: true)
+              end
+            elsif !sol[:inverseAttributeObject].nil?
+              puts "#{uri_properties_hash[sol[:attributeProperty]]} tatataaaa = #{sol[:inverseAttributeObject]}"
+              models_by_id[id].send("#{uri_properties_hash[sol[:attributeProperty]]}=", [sol[:inverseAttributeObject]], on_load: true)
+            end
+            puts models_by_id[id].submissions
+          end
+
           variables.each do |v|
             next if v == :id and models_by_id.include?(id)
             if (v != :id) && !all_attributes.include?(v)
