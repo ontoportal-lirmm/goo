@@ -698,29 +698,9 @@ module Goo
             end
             next
           end
-          
+
           if !sol[:attributeProperty].nil?
             # Retrieve all included attributes
-            #attr_retrieved = uri_properties_hash[sol[:attributeProperty]]
-
-=begin
-            if !sol[:attributeObject].nil?
-              if sol[:attributeObject].kind_of?(RDF::Literal)
-                key = "#{uri_properties_hash[sol[:attributeProperty]]}#__#{id.to_s}"
-                models_by_id[id].send("#{uri_properties_hash[sol[:attributeProperty]]}=", sol[:attributeObject], on_load: true) unless var_set_hash[key]
-                puts models_by_id[id].acronym
-                lang = sol[:attributeObject].language
-                var_set_hash[key] = true if lang == :EN || lang == :en
-              else
-                puts "#{uri_properties_hash[sol[:attributeProperty]]} toto = #{sol[:attributeObject]}"
-                models_by_id[id].send("#{uri_properties_hash[sol[:attributeProperty]]}=", sol[:attributeObject], on_load: true)
-              end
-            elsif !sol[:inverseAttributeObject].nil?
-              puts "#{uri_properties_hash[sol[:attributeProperty]]} tatataaaa = #{sol[:inverseAttributeObject]}"
-              models_by_id[id].send("#{uri_properties_hash[sol[:attributeProperty]]}=", [sol[:inverseAttributeObject]], on_load: true)
-            end
-            puts models_by_id[id].submissions
-=end
 
             v = uri_properties_hash[sol[:attributeProperty]]
             if !sol[:attributeObject].nil?
