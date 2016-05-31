@@ -639,11 +639,12 @@ module Goo
           select.union_with_bind_as(*binding_as)
         end
 
+        # TODO: remove it? expand_equivalent_predicates_filter does the job now
         expand_equivalent_predicates(select,equivalent_predicates)
         var_set_hash = {}
         id_array = []
 
-        puts "seeeeeelect #{select}"
+        puts "#{select}"
 
         # iterate other solutions of the select query
         select.each_solution do |sol|
