@@ -926,15 +926,19 @@ module Goo
         end
 
         if !incl.nil?
-          # Here we are setting all attribute that have been included but not found in the triplestore to loaded but nil
+          # Here we are setting to nil all attributes that have been included but not found in the triplestore
           id_array.uniq!
           incl.each do |attr_to_incl|
             # Go through all attr we had to include
             id_array.each do |model_id|
               # Go through all models queried
-              if !models_by_id[model_id].loaded_attributes.include?(attr_to_incl) && models_by_id[model_id].respond_to?(attr_to_incl)
-                # If the asked attr has not been loaded then it is set to nil
-                models_by_id[model_id].send("#{attr_to_incl}=", nil, on_load: true)
+              if models_by_id[model_id].respond_to?("loaded_attributes") && !models_by_id[model_id].loaded_attributes.include?(attr_to_incl) && models_by_id[model_id].respond_to?(attr_to_incl) && !attr_to_incl.to_s.eql?("unmapped")
+                if list_attributes.include?(attr_to_incl)
+                  # If the asked attr has not been loaded then it is set to nil or to an empty array for list attr
+                  models_by_id[model_id].send("#{attr_to_incl}=", [], on_load: true)
+                else
+                  models_by_id[model_id].send("#{attr_to_incl}=", nil, on_load: true)
+                end
               end
             end
           end
