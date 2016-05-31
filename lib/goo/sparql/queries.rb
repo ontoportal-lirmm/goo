@@ -698,7 +698,7 @@ module Goo
             end
             next
           end
-
+          
           if !sol[:attributeProperty].nil?
             # Retrieve all included attributes
             #attr_retrieved = uri_properties_hash[sol[:attributeProperty]]
@@ -727,6 +727,8 @@ module Goo
               object = sol[:attributeObject]
             elsif !sol[:inverseAttributeObject].nil?
               object = sol[:inverseAttributeObject]
+            else
+              object = nil
             end
 
             if (v != :id) && !all_attributes.include?(v)
