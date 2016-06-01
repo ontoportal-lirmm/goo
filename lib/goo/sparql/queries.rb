@@ -295,9 +295,51 @@ module Goo
 =begin
   Explanation why we need to change how the SPARQL queries are built:
 
+  Example of a query built to get informations of submissions 2 of the MO ontologies
+
+SELECT DISTINCT ?id ?submissionId ?prefLabelProperty ?definitionProperty ?synonymProperty ?authorProperty ?classType ?hierarchyProperty ?obsoleteProperty
+?obsoleteParent ?homepage ?publication ?uri ?naturalLanguage ?documentation ?version ?creationDate ?description ?status ?released ?uploadFilePath
+?diffFilePath ?masterFileName ?missingImports ?pullLocation ?metrics ?contact ?hasOntologyLanguage ?ontology ?submissionStatus
+FROM <http://data.bioontology.org/metadata/OntologySubmission>
+WHERE { ?id a <http://data.bioontology.org/metadata/OntologySubmission> . OPTIONAL { ?id <http://data.bioontology.org/metadata/submissionId> ?submissionId . }
+OPTIONAL { ?id <http://data.bioontology.org/metadata/prefLabelProperty> ?prefLabelProperty . } OPTIONAL { ?id <http://data.bioontology.org/metadata/definitionProperty> ?definitionProperty . }
+OPTIONAL { ?id <http://data.bioontology.org/metadata/synonymProperty> ?synonymProperty . } OPTIONAL { ?id <http://data.bioontology.org/metadata/authorProperty> ?authorProperty . }
+OPTIONAL { ?id <http://data.bioontology.org/metadata/classType> ?classType . } OPTIONAL { ?id <http://data.bioontology.org/metadata/hierarchyProperty> ?hierarchyProperty . }
+OPTIONAL { ?id <http://data.bioontology.org/metadata/obsoleteProperty> ?obsoleteProperty . } OPTIONAL { ?id <http://data.bioontology.org/metadata/obsoleteParent> ?obsoleteParent . }
+OPTIONAL { ?id <http://data.bioontology.org/metadata/homepage> ?homepage . } OPTIONAL { ?id <http://data.bioontology.org/metadata/publication> ?publication . }
+OPTIONAL { ?id <http://omv.ontoware.org/2005/05/ontology#uri> ?uri . } OPTIONAL { ?id <http://omv.ontoware.org/2005/05/ontology#naturalLanguage> ?naturalLanguage . }
+OPTIONAL { ?id <http://omv.ontoware.org/2005/05/ontology#documentation> ?documentation . } OPTIONAL { ?id <http://omv.ontoware.org/2005/05/ontology#version> ?version . }
+OPTIONAL { ?id <http://omv.ontoware.org/2005/05/ontology#creationDate> ?creationDate . } OPTIONAL { ?id <http://omv.ontoware.org/2005/05/ontology#description> ?description . }
+OPTIONAL { ?id <http://omv.ontoware.org/2005/05/ontology#status> ?status . } OPTIONAL { ?id <http://data.bioontology.org/metadata/released> ?released . }
+OPTIONAL { ?id <http://data.bioontology.org/metadata/uploadFilePath> ?uploadFilePath . } OPTIONAL { ?id <http://data.bioontology.org/metadata/diffFilePath> ?diffFilePath . }
+OPTIONAL { ?id <http://data.bioontology.org/metadata/masterFileName> ?masterFileName . } OPTIONAL { ?id <http://data.bioontology.org/metadata/missingImports> ?missingImports . }
+OPTIONAL { ?id <http://data.bioontology.org/metadata/pullLocation> ?pullLocation . } OPTIONAL { ?id <http://data.bioontology.org/metadata/metrics> ?metrics . }
+OPTIONAL { ?id <http://data.bioontology.org/metadata/contact> ?contact . } OPTIONAL { ?id <http://omv.ontoware.org/2005/05/ontology#hasOntologyLanguage> ?hasOntologyLanguage . }
+OPTIONAL { ?id <http://data.bioontology.org/metadata/ontology> ?ontology . } OPTIONAL { ?id <http://data.bioontology.org/metadata/submissionStatus> ?submissionStatus . }
+FILTER(?id = <http://data.bioontology.org/ontologies/MO/submissions/2>) }
+
+  If there are only single value it is perfect, it returns a single result. But if there are multiple values for multiple attributes then the number of results is a
+multiplication of the number of values for each attribute
+  For example if we have 3 attributes with the following values:
+attr1 = ["a1 value1", "a1 value2"]
+attr2 = ["a2 value3", "a2 value4", a2 value5]
+attr3 = ["a3 value6", "a3 value7"]
+  We will got the following results:
+"a1 value1", "a2 value3", "a3 value6"
+"a1 value1", "a2 value4", "a3 value6"
+"a1 value1", "a2 value5", "a3 value6"
+"a1 value2",  "a2 value3", "a3 value6"
+"a1 value2",  "a2 value4", "a3 value6"
+"a1 value2",  "a2 value5", "a3 value6"
+"a1 value1", "a2 value3", "a3 value7"
+"a1 value1", "a2 value4", "a3 value7"
+"a1 value1", "a2 value5", "a3 value7"
+"a1 value2",  "a2 value3", "a3 value7"
+"a1 value2",  "a2 value4", "a3 value7"
+"a1 value2",  "a2 value5", "a3 value7"
 
 
-
+  Here is the new query generated
 SELECT DISTINCT ?id ?attributeProperty ?attributeObject FROM <http://data.bioontology.org/metadata/OntologySubmission>
 WHERE { ?id a <http://data.bioontology.org/metadata/OntologySubmission> . OPTIONAL { ?id ?attributeProperty ?attributeObject . }
 FILTER(?id = <http://data.bioontology.org/ontologies/MO/submissions/2>) FILTER(?attributeProperty = <http://data.bioontology.org/metadata/submissionId> ||
@@ -316,6 +358,11 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO/submissions/2>) FILTER(?
 ?attributeProperty = <http://data.bioontology.org/metadata/contact> || ?attributeProperty = <http://omv.ontoware.org/2005/05/ontology#hasOntologyLanguage> ||
 ?attributeProperty = <http://data.bioontology.org/metadata/ontology> || ?attributeProperty = <http://data.bioontology.org/metadata/submissionStatus>) }
 
+  And new query with inverse attributes:
+SELECT DISTINCT ?id ?attributeProperty ?attributeObject ?inverseAttributeObject
+FROM <http://data.bioontology.org/metadata/Ontology> FROM <http://data.bioontology.org/metadata/OntologySubmission>
+WHERE { ?id a <http://data.bioontology.org/metadata/Ontology> . OPTIONAL { ?id ?attributeProperty ?attributeObject . } OPTIONAL { ?inverseAttributeObject ?attributeProperty ?id . }
+FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributeProperty = <http://data.bioontology.org/metadata/ontology>) }
 
 =end
 
