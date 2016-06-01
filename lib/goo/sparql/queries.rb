@@ -51,7 +51,11 @@ module Goo
         end
       end
 
-      # Expand equivalent predicate for attribute that are retrieved using filter (the smart way to retrieve...)
+      # Expand equivalent predicate for attribute that are retrieved using filter (the new way to retrieve...)
+      # i.e.: prefLabel can also be retrieved using the "http://data.bioontology.org/metadata/def/prefLabel" URI
+      # so we add "http://data.bioontology.org/metadata/def/prefLabel" to the array_includes_filter that will generates a filter on property for meta:prefLabel
+      # and we add the following entry to the uri_properties_hash: "http://data.bioontology.org/metadata/def/prefLabel" => "prefLabel"
+      # So the object of http://data.bioontology.org/metadata/def/prefLabel will be retrieved and added to this attribute
       def self.expand_equivalent_predicates_filter(eq_p, array_includes_filter, uri_properties_hash)
         array_includes_filter_out = array_includes_filter.dup
         if eq_p && eq_p.length > 0
@@ -287,6 +291,46 @@ module Goo
       ##
       # always a list of attributes with subject == id
       ##
+
+=begin
+  Explanation why we need to change how the SPARQL queries are built:
+
+
+
+
+SELECT DISTINCT ?id ?attributeProperty ?attributeObject FROM <http://data.bioontology.org/metadata/OntologySubmission>
+WHERE { ?id a <http://data.bioontology.org/metadata/OntologySubmission> . OPTIONAL { ?id ?attributeProperty ?attributeObject . }
+FILTER(?id = <http://data.bioontology.org/ontologies/MO/submissions/2>) FILTER(?attributeProperty = <http://data.bioontology.org/metadata/submissionId> ||
+?attributeProperty = <http://data.bioontology.org/metadata/prefLabelProperty> || ?attributeProperty = <http://data.bioontology.org/metadata/definitionProperty> ||
+?attributeProperty = <http://data.bioontology.org/metadata/synonymProperty> || ?attributeProperty = <http://data.bioontology.org/metadata/authorProperty> ||
+?attributeProperty = <http://data.bioontology.org/metadata/classType> || ?attributeProperty = <http://data.bioontology.org/metadata/hierarchyProperty> ||
+?attributeProperty = <http://data.bioontology.org/metadata/obsoleteProperty> || ?attributeProperty = <http://data.bioontology.org/metadata/obsoleteParent> ||
+?attributeProperty = <http://data.bioontology.org/metadata/homepage> || ?attributeProperty = <http://data.bioontology.org/metadata/publication> ||
+?attributeProperty = <http://omv.ontoware.org/2005/05/ontology#uri> || ?attributeProperty = <http://omv.ontoware.org/2005/05/ontology#naturalLanguage> ||
+?attributeProperty = <http://omv.ontoware.org/2005/05/ontology#documentation> || ?attributeProperty = <http://omv.ontoware.org/2005/05/ontology#version> ||
+?attributeProperty = <http://omv.ontoware.org/2005/05/ontology#creationDate> || ?attributeProperty = <http://omv.ontoware.org/2005/05/ontology#description> ||
+?attributeProperty = <http://omv.ontoware.org/2005/05/ontology#status> || ?attributeProperty = <http://data.bioontology.org/metadata/released> ||
+?attributeProperty = <http://data.bioontology.org/metadata/uploadFilePath> || ?attributeProperty = <http://data.bioontology.org/metadata/diffFilePath> ||
+?attributeProperty = <http://data.bioontology.org/metadata/masterFileName> || ?attributeProperty = <http://data.bioontology.org/metadata/missingImports> ||
+?attributeProperty = <http://data.bioontology.org/metadata/pullLocation> || ?attributeProperty = <http://data.bioontology.org/metadata/metrics> ||
+?attributeProperty = <http://data.bioontology.org/metadata/contact> || ?attributeProperty = <http://omv.ontoware.org/2005/05/ontology#hasOntologyLanguage> ||
+?attributeProperty = <http://data.bioontology.org/metadata/ontology> || ?attributeProperty = <http://data.bioontology.org/metadata/submissionStatus>) }
+
+
+=end
+
+
+      ########
+      # TODO: the building of all SPARQL queries that are used by GOO to retrieve objects from the triplestore are done here
+      # How the query was built was really bad to get list of attributes. This have been improved by changing how it is built
+      # Now it is returning a result for each attribute we want to retrieve constructing the query with :attributeProperty, :attributeObject
+      # instead of listing every attributes in the variable we want to retrieve.
+      # This new way is not totally optimized. But it works to get ontologies, users, submissions, search
+      # But running the ontologies_linked_data tests shows 6 errors to fix
+      # One error is linked to aggregate/childrenCount. It seems to be used for "search" but I couldn't find when it is really used in practice
+      # To enhance and push those changes in production we need to pass all tests and better understand every cases of query building to be sure
+      # the query building is optimized and stable
+      ########
       def self.model_load_sliced(*options)
         options = options.last
         ids = options[:ids]
@@ -294,6 +338,8 @@ module Goo
         incl = options[:include]
         models = options[:models]
         query_filters = options[:filters]
+        # TODO: aggregate is only used by childrenCount in Class. That is used by get_index_doc (used only for search,
+        # and I didn't managed to trigger it using the ontologies_api) so I wonder if it is really used
         aggregate = options[:aggregate]
         read_only = options[:read_only]
         graph_match = options[:graph_match]
@@ -459,6 +505,7 @@ module Goo
               graph, pattern = query_pattern(klass,attr,collection: collection)
               # pattern is an array of this form: [:id, #<RDF::URI:0x3fc384d47ad8(http://data.bioontology.org/metadata/firstName)>, :firstName]
               add_rules(attr,klass,query_options)
+              # TODO: improve how the inverse attributes are retrieved?
               if klass.attributes(:all).include?(attr) && klass.inverse?(attr) && inversed == false
                 # In case we have an inverse attribute to retrieve (i.e.: submissions linked to an ontology)
                 inversed = true
@@ -471,8 +518,6 @@ module Goo
               uri_properties_hash[pattern[1]] = attr
               graphs << graph if graph && (!klass.collection_opts || klass.inverse?(attr))
             end
-            # TODO: POUR CORRIGER CA IL FAUT voir l'exemple de SPARQL query sur dropbox CORRECTION BUG SPARQL.sparql
-            # ne plus ajouter les variable include dans "variables", à la place on met ?attributeProperty ?attributeObject
 
             array_includes_filter, uri_properties_hash = expand_equivalent_predicates_filter(equivalent_predicates, array_includes_filter, uri_properties_hash)
             array_includes_filter.uniq!
