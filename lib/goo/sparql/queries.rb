@@ -526,7 +526,7 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
             end
             unmapped = true
           else
-            # includes are generated here
+            # "includes are generated here!"
             #make it deterministic
             incl = incl.to_a
             incl_direct = incl.select { |a| a.instance_of?(Symbol) }
@@ -562,6 +562,9 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
               # When doing a "bring" the poorly written optional patterns come from here
               #optional_patterns << pattern if pattern
               array_includes_filter << pattern[1] # just take the URI of the attribute property
+
+              # The URI of the property is added to an hash (i.e.: "http://data.bioontology.org/metadata/def/prefLabel" => "prefLabel")
+              # so we can retrieve the property linked to this URI when retrieving the results
               uri_properties_hash[pattern[1]] = attr
               graphs << graph if graph && (!klass.collection_opts || klass.inverse?(attr))
             end
@@ -792,9 +795,10 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
             next
           end
 
+          # Retrieve all included attributes
           if !sol[:attributeProperty].nil?
-            # Retrieve all included attributes
 
+            # Get the property label using the hash
             v = uri_properties_hash[sol[:attributeProperty]]
             if !sol[:attributeObject].nil?
               object = sol[:attributeObject]
