@@ -377,6 +377,7 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
       # One error is linked to aggregate/childrenCount. It seems to be used for "search" but I couldn't find when it is really used in practice
       # To enhance and push those changes in production we need to pass all tests and better understand every cases of query building to be sure
       # the query building is optimized and stable
+      # The GOO tests are not actually working, run ontologies_linked_data tests to test this
       ########
       def self.model_load_sliced(*options)
         options = options.last
