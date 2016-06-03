@@ -386,9 +386,11 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
         incl = options[:include]
         models = options[:models]
         query_filters = options[:filters]
-        # TODO: aggregate is only used by childrenCount in Class. That is used by get_index_doc (used only for search,
-        # It is used in when calling /tree of a class or asking to ?include=children to a class
+        # TODO: aggregate ()used by childrenCount in Class) is NOT WORKING. To fix
+        # aggregate is only used by childrenCount in Class. That is used by get_index_doc (used only for search,
+        # It is used in when calling /tree of a class or asking to ?include=children or childrenCount to a class
         # "http://localhost:9393/ontologies/BRO/classes/http%3A%2F%2Fbioontology.org%2Fontologies%2FBiomedicalResourceOntology.owl%23Ontology_Development_and_Management/tree"
+        # "http://localhost:9393/ontologies/BRO/classes/http%3A%2F%2Fbioontology.org%2Fontologies%2FBiomedicalResourceOntology.owl%23Ontology_Development_and_Management?include=children"
         # "http://localhost:9393/ontologies/BRO/classes/http%3A%2F%2Fbioontology.org%2Fontologies%2FBiomedicalResourceOntology.owl%23Ontology_Development_and_Management?include=children"
         # Use it to understand where the problem comes and fix it.
         aggregate = options[:aggregate]
