@@ -387,7 +387,10 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
         models = options[:models]
         query_filters = options[:filters]
         # TODO: aggregate is only used by childrenCount in Class. That is used by get_index_doc (used only for search,
-        # and I didn't managed to trigger it using the ontologies_api) so I wonder if it is really used
+        # It is used in when calling /tree of a class or asking to ?include=children to a class
+        # "http://localhost:9393/ontologies/BRO/classes/http%3A%2F%2Fbioontology.org%2Fontologies%2FBiomedicalResourceOntology.owl%23Ontology_Development_and_Management/tree"
+        # "http://localhost:9393/ontologies/BRO/classes/http%3A%2F%2Fbioontology.org%2Fontologies%2FBiomedicalResourceOntology.owl%23Ontology_Development_and_Management?include=children"
+        # Use it to understand where the problem comes and fix it.
         aggregate = options[:aggregate]
         read_only = options[:read_only]
         graph_match = options[:graph_match]
