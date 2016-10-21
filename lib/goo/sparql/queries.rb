@@ -335,7 +335,7 @@ module Goo
 
         if models
           models.each do |m|
-            if not m.nil? and !m.respond_to?:klass #read only
+            if not m.nil? and !m.respond_to? :klass #read only
               raise ArgumentError,
               "To load attributes the resource must be persistent" unless m.persistent?
             end
@@ -380,7 +380,7 @@ module Goo
         unmapped = nil
         bnode_extraction = nil
         if incl
-          if incl.first and incl.first.is_a?(Hash) and incl.first.include?:bnode
+          if incl.first and incl.first.is_a?(Hash) and incl.first.include? :bnode
             #limitation only one level BNODE
             bnode_conf = incl.first[:bnode]
             klass_attr = bnode_conf.keys.first
@@ -624,7 +624,7 @@ module Goo
               var = sol[:bind_as].to_s.to_sym
               if predicates_map.include?(var)
                 pred = predicates_map[var]
-                if models_by_id[id].respond_to?:klass #struct
+                if models_by_id[id].respond_to? :klass #struct
                   models_by_id[id][:unmapped] ||= {}
                   (models_by_id[id][:unmapped][pred] ||= Set.new) << sol[:object]
                 else
@@ -639,7 +639,7 @@ module Goo
             if (v != :id) && !all_attributes.include?(v)
               if aggregate_projections && aggregate_projections.include?(v)
                 conf = aggregate_projections[v]
-                if models_by_id[id].respond_to?:add_aggregate
+                if models_by_id[id].respond_to? :add_aggregate
                   models_by_id[id].add_aggregate(conf[1], conf[0], sol[v].object)
                 else
                   (models_by_id[id].aggregates ||= []) <<
@@ -725,12 +725,16 @@ module Goo
                 unless object.nil? && !models_by_id[id].instance_variable_get("@#{v.to_s}").nil?
                   if v != :id
                     # if multiple language values are included for a given property, set the
-                    # corresponding model attribute to the English language value - NCBO-1662
+                    # corresponding model attribute to the French value, then English language value - NCBO-1662
                     if sol[v].kind_of?(RDF::Literal)
                       key = "#{v}#__#{id.to_s}"
                       models_by_id[id].send("#{v}=", object, on_load: true) unless var_set_hash[key]
                       lang = sol[v].language
-                      var_set_hash[key] = true if lang == :EN || lang == :en
+                      if lang == :FR || lang == :fr
+                        var_set_hash[key] = true
+                      else
+                        var_set_hash[key] = true if lang == :EN || lang == :en
+                      end
                     else
                       models_by_id[id].send("#{v}=", object, on_load: true)
                     end
@@ -747,7 +751,7 @@ module Goo
           if collection.is_a?Array and collection.length == 1
             collection_value = collection.first
           end
-          if collection.respond_to?:id
+          if collection.respond_to? :id
             collection_value = collection
           end
         end
