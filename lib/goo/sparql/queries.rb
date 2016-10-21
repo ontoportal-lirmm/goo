@@ -581,7 +581,7 @@ module Goo
         end
 
         expand_equivalent_predicates(select,equivalent_predicates)
-        var_set_hash = {}
+        value_lang_stored = {}
 
         select.each_solution do |sol|
           next if sol[:some_type] && klass.type_uri(collection) != sol[:some_type]
@@ -725,17 +725,28 @@ module Goo
                 unless object.nil? && !models_by_id[id].instance_variable_get("@#{v.to_s}").nil?
                   if v != :id
                     # if multiple language values are included for a given property, set the
-                    # corresponding model attribute to the French value, then English language value - NCBO-1662
+                    # corresponding model attribute to the French value - NCBO-1662
+                    # store the lang of the value used for the moel in value_lang_stored
                     if sol[v].kind_of?(RDF::Literal)
                       key = "#{v}#__#{id.to_s}"
-                      models_by_id[id].send("#{v}=", object, on_load: true) unless var_set_hash[key]
+                      #models_by_id[id].send("#{v}=", object, on_load: true) unless value_lang_stored[key] == :fr
                       lang = sol[v].language
-                      var_set_hash[key] = true if lang == :FR || lang == :fr || lang == :FRE || lang == :fre
-                      #if lang == :FR || lang == :fr
-                      #  var_set_hash[key] = true
-                      #else
-                      #  var_set_hash[key] = true if lang == :EN || lang == :en
-                      #end
+
+                      # take french in priority, then english, then whatever
+                      if lang == :FR || lang == :fr || lang == :FRE || lang == :fre
+                        models_by_id[id].send("#{v}=", object, on_load: true)
+                        value_lang_stored[key] = :fr
+                      elsif lang == :EN || lang == :en || lang == :ENG || lang == :eng
+                        if !value_lang_stored[key].nil? && value_lang_stored[key] != :fr
+                          models_by_id[id].send("#{v}=", object, on_load: true)
+                          value_lang_stored[key] = :en
+                        end
+                      else
+                        if !value_lang_stored[key].nil? && value_lang_stored[key] != :fr && value_lang_stored[key] != :en
+                          models_by_id[id].send("#{v}=", object, on_load: true)
+                          value_lang_stored[key] = lang
+                        end
+                      end
                     else
                       models_by_id[id].send("#{v}=", object, on_load: true)
                     end
