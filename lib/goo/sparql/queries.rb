@@ -737,12 +737,12 @@ module Goo
                         models_by_id[id].send("#{v}=", object, on_load: true)
                         value_lang_stored[key] = :fr
                       elsif lang == :EN || lang == :en || lang == :ENG || lang == :eng
-                        if !value_lang_stored[key].nil? && value_lang_stored[key] != :fr
+                        if value_lang_stored[key].nil? || value_lang_stored[key] != :fr
                           models_by_id[id].send("#{v}=", object, on_load: true)
                           value_lang_stored[key] = :en
                         end
                       else
-                        if !value_lang_stored[key].nil? && value_lang_stored[key] != :fr && value_lang_stored[key] != :en
+                        if value_lang_stored[key].nil?
                           models_by_id[id].send("#{v}=", object, on_load: true)
                           value_lang_stored[key] = lang
                         end
