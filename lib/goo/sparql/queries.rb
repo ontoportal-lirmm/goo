@@ -730,11 +730,12 @@ module Goo
                       key = "#{v}#__#{id.to_s}"
                       models_by_id[id].send("#{v}=", object, on_load: true) unless var_set_hash[key]
                       lang = sol[v].language
-                      if lang == :FR || lang == :fr
-                        var_set_hash[key] = true
-                      else
-                        var_set_hash[key] = true if lang == :EN || lang == :en
-                      end
+                      var_set_hash[key] = true if lang == :FR || lang == :fr
+                      #if lang == :FR || lang == :fr
+                      #  var_set_hash[key] = true
+                      #else
+                      #  var_set_hash[key] = true if lang == :EN || lang == :en
+                      #end
                     else
                       models_by_id[id].send("#{v}=", object, on_load: true)
                     end
