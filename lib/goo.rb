@@ -132,6 +132,11 @@ module Goo
     set_sparql_cache
   end
 
+  ## To set the language used in first when multiple lang for a property
+  #def self.set_main_lang(*opts)
+  #  @@main_lang = opts.delete :main_lang
+  #end
+
   def self.set_sparql_cache
     if @@sparql_backends.length > 0 && @@use_cache
       @@sparql_backends.each do |k,epr|
