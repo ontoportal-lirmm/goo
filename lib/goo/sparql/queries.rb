@@ -724,6 +724,7 @@ module Goo
               unless models_by_id[id].class.handler?(v)
                 unless object.nil? && !models_by_id[id].instance_variable_get("@#{v.to_s}").nil?
                   if v != :id
+                    # TODO: handle multilingual values here
                     # if multiple language values are included for a given property, set the
                     # corresponding model attribute to the French value - NCBO-1662
                     # store the lang of the value used for the moel in value_lang_stored
