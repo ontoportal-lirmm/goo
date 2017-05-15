@@ -821,8 +821,7 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
                 if models_by_id[id].respond_to?(:add_aggregate)
                   models_by_id[id].add_aggregate(conf[1], conf[0], sol[v].object)
                 else
-                  (models_by_id[id].aggregates ||= []) <<
-                      Goo::Base::AGGREGATE_VALUE.new(conf[1], conf[0], sol[v].object)
+                  (models_by_id[id].aggregates ||= []) << Goo::Base::AGGREGATE_VALUE.new(conf[1], conf[0], sol[v].object)
                 end
               end
               #TODO other schemaless things
