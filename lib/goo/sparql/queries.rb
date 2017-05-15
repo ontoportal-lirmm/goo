@@ -457,7 +457,7 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
 
         if models
           models.each do |m|
-            if not m.nil? and !m.respond_to?:klass #read only
+            if not m.nil? and !m.respond_to?(:klass) #read only
               raise ArgumentError,
               "To load attributes the resource must be persistent" unless m.persistent?
             end
@@ -791,7 +791,7 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
               var = sol[:bind_as].to_s.to_sym
               if predicates_map.include?(var)
                 pred = predicates_map[var]
-                if models_by_id[id].respond_to?:klass #struct
+                if models_by_id[id].respond_to?(:klass) #struct
                   models_by_id[id][:unmapped] ||= {}
                   (models_by_id[id][:unmapped][pred] ||= Set.new) << sol[:object]
                 else
@@ -818,7 +818,7 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
             if (v != :id) && !all_attributes.include?(v)
               if aggregate_projections && aggregate_projections.include?(v)
                 conf = aggregate_projections[v]
-                if models_by_id[id].respond_to?:add_aggregate
+                if models_by_id[id].respond_to?(:add_aggregate)
                 models_by_id[id].add_aggregate(conf[1], conf[0], sol[v].object)
                 else
                   (models_by_id[id].aggregates ||= []) <<
@@ -1055,7 +1055,7 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
           if collection.is_a?Array and collection.length == 1
             collection_value = collection.first
           end
-          if collection.respond_to?:id
+          if collection.respond_to?(:id)
             collection_value = collection
           end
         end
