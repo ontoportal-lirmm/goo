@@ -504,7 +504,7 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
         bnode_extraction = nil
         if incl
           # In case there are "include" properties
-          if incl.first and incl.first.is_a?(Hash) and incl.first.include?:bnode
+          if incl.first and incl.first.is_a?(Hash) and incl.first.include?(:bnode)
             # To include blank node (doesn't seems to be really used...)
             #limitation only one level BNODE
             bnode_conf = incl.first[:bnode]
@@ -646,9 +646,11 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
         if order_by
           order_by = order_by.first
           #simple ordering ... needs to use pattern inspection
-          order_by.each do |attr,direction|
-            quad = query_pattern(klass,attr)
+          order_by.each do |attr, direction|
+            quad = query_pattern(klass, attr)
             patterns << quad[1]
+            #mdorf, 9/22/16 If an ORDER BY clause exists, the columns used in the ORDER BY should be present in the SPARQL select
+            variables << attr unless variables.include?(attr)
           end
         end
 
@@ -667,7 +669,6 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
         # the select query is constructed here!
         select = client.select(*variables).distinct()
         variables.delete :some_type
-
 
         select.where(*patterns)
         optional_patterns.each do |optional|
@@ -924,7 +925,7 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
             if (v != :id) && !all_attributes.include?(v)
               if aggregate_projections && aggregate_projections.include?(v)
                 conf = aggregate_projections[v]
-                if models_by_id[id].respond_to?:add_aggregate
+                if models_by_id[id].respond_to?(:add_aggregate)
                   models_by_id[id].add_aggregate(conf[1], conf[0], sol[v].object)
                 else
                   (models_by_id[id].aggregates ||= []) <<
