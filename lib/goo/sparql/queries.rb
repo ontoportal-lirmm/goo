@@ -802,6 +802,21 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
             next
           end
 
+          # Retrieve aggregates count
+          if variables.include?(:children_agg_count_projection)
+            #binding.pry
+            if aggregate_projections && aggregate_projections.include?(:children_agg_count_projection)
+              conf = aggregate_projections[:children_agg_count_projection]
+              if models_by_id[id].respond_to?(:add_aggregate)
+                models_by_id[id].add_aggregate(conf[1], conf[0], sol[:children_agg_count_projection].object)
+              else
+                (models_by_id[id].aggregates ||= []) << Goo::Base::AGGREGATE_VALUE.new(conf[1], conf[0], sol[:children_agg_count_projection].object)
+              end
+            end
+            #TODO other schemaless things
+            next
+          end
+
           # Retrieve all included attributes
           if !sol[:attributeProperty].nil?
 
