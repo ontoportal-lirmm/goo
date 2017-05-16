@@ -829,17 +829,8 @@ FILTER(?id = <http://data.bioontology.org/ontologies/MO>) FILTER(?attributePrope
             else
               object = nil
             end
-
+            
             if (v != :id) && !all_attributes.include?(v)
-              if aggregate_projections && aggregate_projections.include?(v)
-                conf = aggregate_projections[v]
-                if models_by_id[id].respond_to?(:add_aggregate)
-                  models_by_id[id].add_aggregate(conf[1], conf[0], sol[v].object)
-                else
-                  (models_by_id[id].aggregates ||= []) << Goo::Base::AGGREGATE_VALUE.new(conf[1], conf[0], sol[v].object)
-                end
-              end
-              #TODO other schemaless things
               next
             end
             #group for multiple values
