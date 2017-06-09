@@ -582,7 +582,8 @@ module Goo
         end
 
         expand_equivalent_predicates(select,equivalent_predicates)
-        value_lang_stored = {}
+        main_lang_hash = {}
+        accepted_lang_hash = {}
 
         select.each_solution do |sol|
           next if sol[:some_type] && klass.type_uri(collection) != sol[:some_type]
@@ -725,29 +726,38 @@ module Goo
               unless models_by_id[id].class.handler?(v)
                 unless object.nil? && !models_by_id[id].instance_variable_get("@#{v.to_s}").nil?
                   if v != :id
-                    # TODO: handle multilingual values here
                     # if multiple language values are included for a given property, set the
                     # corresponding model attribute to the French value - NCBO-1662
                     # store the lang of the value used for the moel in value_lang_stored
                     if sol[v].kind_of?(RDF::Literal)
                       key = "#{v}#__#{id.to_s}"
-                      #models_by_id[id].send("#{v}=", object, on_load: true) unless value_lang_stored[key] == :fr
                       lang = sol[v].language
 
-                      # take french in priority, then english, then whatever
-                      if lang == :FR || lang == :fr || lang == :FRE || lang == :fre
+                      #models_by_id[id].send("#{v}=", object, on_load: true) unless var_set_hash[key]
+                      #var_set_hash[key] = true if lang == :EN || lang == :en
+
+                      # We add the value only if it's language is in the main languages or if lang is nil
+                      if (Goo.accepted_lang.nil? || Goo.main_lang.nil?)
                         models_by_id[id].send("#{v}=", object, on_load: true)
-                        value_lang_stored[key] = :fr
-                      elsif lang == :EN || lang == :en || lang == :ENG || lang == :eng
-                        if value_lang_stored[key].nil? || value_lang_stored[key] != :fr
+
+                      elsif (v.to_s.eql?("prefLabel"))
+                        # Special treatment for prefLabel where we want to extract the main_lang first, then accepted lang if no main.
+                        # Then anything if no main or accepted found
+                        if lang.to_s.downcase.eql?(Goo.main_lang)
                           models_by_id[id].send("#{v}=", object, on_load: true)
-                          value_lang_stored[key] = :en
+                          main_lang_hash[key] = true
                         end
-                      else
-                        if value_lang_stored[key].nil?
-                          models_by_id[id].send("#{v}=", object, on_load: true)
-                          value_lang_stored[key] = lang
+                        if !main_lang_hash[key]
+                          if Goo.accepted_lang.include?(lang.to_s.downcase)
+                            models_by_id[id].send("#{v}=", object, on_load: true)
+                            accepted_lang_hash[key] = true
+                          elsif !accepted_lang_hash[key]
+                            models_by_id[id].send("#{v}=", object, on_load: true)
+                          end
                         end
+
+                      elsif (lang.nil? || Goo.accepted_lang.include?(lang.to_s.downcase))
+                        models_by_id[id].send("#{v}=", object, on_load: true)
                       end
                     else
                       models_by_id[id].send("#{v}=", object, on_load: true)
