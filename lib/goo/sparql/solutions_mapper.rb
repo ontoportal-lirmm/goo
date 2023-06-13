@@ -166,8 +166,8 @@ module Goo
 
           if object.nil?
             object = pre.nil? ? [] : pre
-          else
-            object = pre.nil? ? [object] : (pre.dup << object)
+          else            
+            object = pre.nil? ? [object] : (Array(pre).dup << object)
             object.uniq!
           end
 
