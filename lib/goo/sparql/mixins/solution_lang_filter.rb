@@ -6,7 +6,7 @@ module Goo
         attr_reader :requested_lang, :unmapped, :objects_by_lang
 
         def initialize(requested_lang: nil, unmapped: false, list_attributes: [])
-          @attributes_to_translate = [:synonym, :prefLabel, :definition]
+          @attributes_to_translate = [:synonym, :prefLabel, :definition, :label]
           @list_attributes = list_attributes
           @objects_by_lang = {}
           @unmapped = unmapped
@@ -15,7 +15,6 @@ module Goo
 
         def enrich_models(models_by_id)
           
-          ## if the requested language is ALL, we can enrich the models with the objects by language
           objects_by_lang.each do |id, predicates|
             model = models_by_id[id]
             predicates.each do |predicate, values|
