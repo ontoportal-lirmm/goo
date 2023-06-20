@@ -17,10 +17,12 @@ module Goo
           
           objects_by_lang.each do |id, predicates|
             model = models_by_id[id]
-            predicates.each do |predicate, values|
-              if @attributes_to_translate.any? { |attr| predicate.eql?(attr) }
-                save_model_values(model, values, predicate, unmapped) 
-              end
+            predicates.each do |predicate, values|   
+            
+              if values.values.all? { |v| v.all? { |x| literal?(x) && x.plain?} }
+                save_model_values(model, values, predicate, unmapped)
+                
+              end 
             end
           end  
         end
@@ -100,7 +102,6 @@ module Goo
 
         def store_objects_by_lang(id, predicate, object, language)
           # store objects in this format: [id][predicate][language] = [objects]
-
           return if requested_lang.is_a?(Array) && !requested_lang.include?(language)
 
           language_key = language.downcase  
@@ -123,6 +124,7 @@ module Goo
 
 
         def add_unmapped_to_model(model, predicate, value)
+          
           if model.respond_to? :klass # struct
             model[:unmapped] ||= {}
             model[:unmapped][predicate] ||= []
@@ -133,16 +135,10 @@ module Goo
         end
 
         def save_model_values(model, values, predicate, unmapped)
-          if unmapped
-            add_unmapped_to_model(model, predicate, values)
-          else
-            
-            if !list_attributes?(predicate)
-              values = values.map { |k, v| [k, v.first] }.to_h
-            end
+          add_unmapped_to_model(model, predicate, values) if unmapped
+          values = values.map { |k, v| [k, v.first] }.to_h unless list_attributes?(predicate)
 
-            model.send("#{predicate}=", values, on_load: true)
-          end
+          model.send("#{predicate}=", values, on_load: true)
         end
 
         def unmapped_get(model, predicate)
