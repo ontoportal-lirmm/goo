@@ -255,9 +255,13 @@ module Goo
             self.instance_variable_set("@#{attr}",value)
           end
           define_method("#{attr}") do |*args|
+            attr_value = self.instance_variable_get("@#{attr}")
+            attr_value = attr_value.values.first if  attr_value.is_a?(Hash) && !args.include?(:show_with_language)
+
+
             if self.class.handler?(attr)
               if @loaded_attributes.include?(attr)
-                return self.instance_variable_get("@#{attr}")
+                return attr_value
               end
               value = self.send("#{self.class.handler(attr)}")
               self.instance_variable_set("@#{attr}",value)
@@ -266,7 +270,7 @@ module Goo
             end
 
             if (not @persistent) or @loaded_attributes.include?(attr)
-              return self.instance_variable_get("@#{attr}")
+                return attr_value
             else
               # TODO: bug here when no labels from one of the main_lang available... (when it is called by ontologies_linked_data ontologies_submission)
               raise Goo::Base::AttributeNotLoaded, "Attribute `#{attr}` is not loaded for #{self.id}. Loaded attributes: #{@loaded_attributes.inspect}."
