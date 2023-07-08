@@ -119,12 +119,7 @@ module Goo
 
       def unmapped_set(attribute,value)
         @unmapped ||= {}
-        @unmapped[attribute] ||= Set.new
-        @unmapped[attribute].merge(Array(value)) unless value.nil?
-      end
- 
-      def unmapped_get(attribute)
-        @unmapped[attribute]
+        (@unmapped[attribute] ||= Set.new) << value
       end
 
       def unmmaped_to_array
@@ -391,7 +386,25 @@ module Goo
               object = unmapped_string_keys[attr_uri]
             end
 
-            object = object.map {|o| o.is_a?(RDF::URI) ? o : o.object}
+            lang_filter = Goo::SPARQL::Solution::LanguageFilter.new
+
+            object = object.map do |o|
+              if o.is_a?(RDF::URI)
+                o
+              else
+                literal = o
+                index, lang_val  = lang_filter.main_lang_filter inst.id.to_s, attr, literal
+                lang_val.to_s if index.eql? :no_lang
+              end
+            end
+
+            object = object.compact
+
+            other_languages_values = lang_filter.other_languages_values
+            other_languages_values = other_languages_values[inst.id.to_s][attr] unless other_languages_values.empty?
+            unless other_languages_values.nil?
+              object = lang_filter.languages_values_to_set(other_languages_values, object)
+            end
 
             if klass.range(attr)
               object = object.map { |o|
@@ -406,6 +419,11 @@ module Goo
           else
             inst.send("#{attr}=",
                       list_attrs.include?(attr) ? [] : nil, on_load: true)
+            if inst.id.to_s == "http://purl.obolibrary.org/obo/IAO_0000415"
+              if attr == :definition
+                # binding.pry
+              end
+            end
           end
 
         end
