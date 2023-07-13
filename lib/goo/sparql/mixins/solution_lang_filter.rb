@@ -135,10 +135,15 @@ module Goo
         end
 
         def save_model_values(model, values, predicate, unmapped)
-          add_unmapped_to_model(model, predicate, values) if unmapped
-          values = values.map { |k, v| [k, v.first] }.to_h unless list_attributes?(predicate)
+          if unmapped
+            add_unmapped_to_model(model, predicate, values) 
 
-          model.send("#{predicate}=", values, on_load: true)
+          else 
+            values = values.map { |k, v| [k, v.first] }.to_h unless list_attributes?(predicate)
+
+            model.send("#{predicate}=", values, on_load: true)
+          end
+
         end
 
         def unmapped_get(model, predicate)
