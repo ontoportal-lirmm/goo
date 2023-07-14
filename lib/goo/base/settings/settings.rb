@@ -401,7 +401,7 @@ module Goo
         end
 
         def show_all_languages?(args)
-          args.include?(:show_with_language)
+          args.first.is_a?(Hash) && args.first.keys.include?(:show_languages) && args.first[:show_languages]
         end
 
         def not_show_all_languages?(values, args)
