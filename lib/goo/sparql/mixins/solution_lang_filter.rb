@@ -145,7 +145,11 @@ module Goo
             add_unmapped_to_model(model, predicate, values) 
 
           else 
-            values = values.map { |k, v| [k, v.first] }.to_h unless list_attributes?(predicate)
+            values = values.map do  |language, values_literals|
+              values_string = values_literals.map{|x| x.object}
+              values_string = values_string.first unless list_attributes?(predicate)
+              [language, values_string]
+            end.to_h
 
             model.send("#{predicate}=", values, on_load: true)
           end
