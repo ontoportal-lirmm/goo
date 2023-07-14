@@ -6,7 +6,6 @@ module Goo
         attr_reader :requested_lang, :unmapped, :objects_by_lang
 
         def initialize(requested_lang: RequestStore.store[:requested_lang], unmapped: false, list_attributes: [])
-          @attributes_to_translate = [:synonym, :prefLabel, :definition, :label]
           @list_attributes = list_attributes
           @objects_by_lang = {}
           @unmapped = unmapped
