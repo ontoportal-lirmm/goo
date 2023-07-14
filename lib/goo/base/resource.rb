@@ -353,13 +353,13 @@ module Goo
 
 
 
-      def self.map_attributes(inst,equivalent_predicates=nil)
+      def self.map_attributes(inst,equivalent_predicates=nil, include_languages: false)
         if (inst.kind_of?(Goo::Base::Resource) && inst.unmapped.nil?) ||
           (!inst.respond_to?(:unmapped) && inst[:unmapped].nil?)
           raise ArgumentError, "Resource.map_attributes only works for :unmapped instances"
         end
         klass = inst.respond_to?(:klass) ? inst[:klass] : inst.class
-        unmapped = inst.respond_to?(:klass) ? inst[:unmapped] : inst.unmapped
+        unmapped = inst.respond_to?(:klass) ? inst[:unmapped] : inst.unmapped(include_languages: include_languages)
         list_attrs = klass.attributes(:list)
         unmapped_string_keys = Hash.new
         unmapped.each do |k,v|
@@ -390,13 +390,18 @@ module Goo
               object = unmapped_string_keys[attr_uri]
             end
 
-            object = object.map {|o| o.is_a?(RDF::URI) ? o : o.object}
+            if object.is_a?(Hash)
+              object = object.transform_values{|values| Array(values).map{|o|o.is_a?(RDF::URI) ? o : o.object}}
+            else
+              object = object.map {|o| o.is_a?(RDF::URI) ? o : o.object}
+            end
 
             if klass.range(attr)
               object = object.map { |o|
                 o.is_a?(RDF::URI) ? klass.range_object(attr,o) : o }
             end
-            object = object.first unless list_attrs.include?(attr)
+
+            object = object.first unless list_attrs.include?(attr) || include_languages
             if inst.respond_to?(:klass)
               inst[attr] = object
             else
