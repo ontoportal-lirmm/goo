@@ -76,7 +76,7 @@ module Goo
         end
       
         # for this moment we are not going to enrich models , maybe we will use it if the results are empty  
-        @lang_filter.enrich_models(@models_by_id)
+        @lang_filter.fill_models_with_all_languages(@models_by_id)
 
         init_unloaded_attributes(found, list_attributes)
 
@@ -419,7 +419,7 @@ module Goo
         id = sol[:id]
         value = sol[:attributeObject]
 
-        @lang_filter.model_set_unmapped(@models_by_id[id], @properties_to_include[predicate][:uri], value)
+        @lang_filter.set_unmapped_value(@models_by_id[id], @properties_to_include[predicate][:uri], value)
       end
 
       def add_aggregations_to_model(sol)
