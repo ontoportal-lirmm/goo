@@ -137,7 +137,7 @@ module Goo
       end
 
       def unmapped(*args)
-        @unmapped.transform_values do  |language_values|
+        @unmapped&.transform_values do  |language_values|
           self.class.not_show_all_languages?(language_values, args) ?  language_values.values.flatten: language_values
         end
       end
