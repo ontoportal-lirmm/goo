@@ -120,15 +120,6 @@ module Goo
         end
 
 
-        def get_model_attribute_value(model, predicate)
-          if unmapped
-            unmapped_get(model, predicate)
-          else
-            model.instance_variable_get("@#{predicate}")
-          end
-        end
-
-
         def add_unmapped_to_model(model, predicate, value)
           
           if model.respond_to? :klass # struct
