@@ -74,19 +74,16 @@ module Goo
 
         def group_by_lang(values)
 
-          return values.to_a if is_a_uri?(values.first)
+          return values.to_a if values.all?{|x| x.is_a?(RDF::URI) || !x.respond_to?(:language) }
 
-          values = values.group_by { |x| x.language ? x.language.to_s.downcase : :none }
+          values = values.group_by { |x| x.respond_to?(:language) && x.language ? x.language.to_s.downcase : :none }
 
           no_lang = values[:none] || []
-          return no_lang if !no_lang.empty? && no_lang.all? { |x| !x.plain? }
+          return no_lang if !no_lang.empty? && no_lang.all? { |x| x.respond_to?(:plain?) && !x.plain? }
 
           values
         end
 
-        def is_a_uri?(value)
-          value.is_a?(RDF::URI) && value.valid?
-        end
 
         def object_language(new_value)
           new_value.language || :no_lang if new_value.is_a?(RDF::Literal)

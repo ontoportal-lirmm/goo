@@ -179,8 +179,8 @@ module Goo
       def get_preload_value(id, object, predicate)
         pre_val = nil
         if predicate_preloaded?(id, predicate)
-          pre_val = preloaded_value(id, predicate)          
-          pre_val = pre_val.select { |x|  x.id  == object  }.first if pre_val.is_a?(Array)
+          pre_val = preloaded_value(id, predicate)
+          pre_val = pre_val.select { |x| x.respond_to?(:id) && (x.id == object) }.first if pre_val.is_a?(Array)
         end
         pre_val
       end
