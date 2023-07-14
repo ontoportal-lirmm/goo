@@ -22,7 +22,7 @@ module Goo
         @incl = options[:include]
         @count = options[:count]
         @collection = options[:collection]
-        @requested_lang =  get_language(options[:requested_lang].to_s) 
+        @options = options
       end
       
       def map_each_solutions(select)
@@ -31,7 +31,7 @@ module Goo
         list_attributes = Set.new(@klass.attributes(:list))
         all_attributes = Set.new(@klass.attributes(:all))
 
-        @lang_filter = Goo::SPARQL::Solution::LanguageFilter.new(requested_lang: @requested_lang, unmapped: @unmapped,
+        @lang_filter = Goo::SPARQL::Solution::LanguageFilter.new(requested_lang: @options[:requested_lang].to_s, unmapped: @unmapped,
            list_attributes: list_attributes)
         
         select.each_solution do |sol|

@@ -5,12 +5,12 @@ module Goo
         
         attr_reader :requested_lang, :unmapped, :objects_by_lang
 
-        def initialize(requested_lang: nil, unmapped: false, list_attributes: [])
+        def initialize(requested_lang: RequestStore.store[:requested_lang], unmapped: false, list_attributes: [])
           @attributes_to_translate = [:synonym, :prefLabel, :definition, :label]
           @list_attributes = list_attributes
           @objects_by_lang = {}
           @unmapped = unmapped
-          @requested_lang = requested_lang
+          @requested_lang = get_language(requested_lang)
         end
 
         def enrich_models(models_by_id)
