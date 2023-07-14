@@ -22,7 +22,7 @@ module Goo
         @incl = options[:include]
         @count = options[:count]
         @collection = options[:collection]
-        @requested_lang =  get_language(options[:requested_lang].to_s) 
+        @options = options
       end
       
       def map_each_solutions(select)
@@ -31,7 +31,7 @@ module Goo
         list_attributes = Set.new(@klass.attributes(:list))
         all_attributes = Set.new(@klass.attributes(:all))
 
-        @lang_filter = Goo::SPARQL::Solution::LanguageFilter.new(requested_lang: @requested_lang, unmapped: @unmapped,
+        @lang_filter = Goo::SPARQL::Solution::LanguageFilter.new(requested_lang: @options[:requested_lang].to_s, unmapped: @unmapped,
            list_attributes: list_attributes)
         
         select.each_solution do |sol|
@@ -76,7 +76,7 @@ module Goo
         end
       
         # for this moment we are not going to enrich models , maybe we will use it if the results are empty  
-        @lang_filter.enrich_models(@models_by_id)
+        @lang_filter.fill_models_with_all_languages(@models_by_id)
 
         init_unloaded_attributes(found, list_attributes)
 
@@ -103,16 +103,6 @@ module Goo
       end
 
       private
-
-      def get_language(languages)
-        languages = portal_language if languages.nil? || languages.empty?
-        lang = languages.split(',').map {|l| l.upcase.to_sym}
-        lang.length == 1 ? lang.first : lang
-      end
-
-      def portal_language
-        Goo.main_languages.first
-      end
 
       def init_unloaded_attributes(found, list_attributes)
         return if @incl.nil?
@@ -271,11 +261,7 @@ module Goo
 
       def models_unmapped_to_array(models_by_id)
         models_by_id.each do |_idm, m|
-          if is_multiple_langs?
-            @lang_filter.model_group_by_lang(m, @requested_lang)
-          else
-            m.unmmaped_to_array
-          end
+          @lang_filter.models_unmapped_to_array(m)
         end
       end
 
@@ -433,7 +419,7 @@ module Goo
         id = sol[:id]
         value = sol[:attributeObject]
 
-        @lang_filter.model_set_unmapped(@models_by_id[id], @properties_to_include[predicate][:uri], value)
+        @lang_filter.set_unmapped_value(@models_by_id[id], @properties_to_include[predicate][:uri], value)
       end
 
       def add_aggregations_to_model(sol)
