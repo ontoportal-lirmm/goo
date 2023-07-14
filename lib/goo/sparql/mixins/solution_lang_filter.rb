@@ -63,6 +63,13 @@ module Goo
           model.unmapped = cpy
         end
 
+        def models_unmapped_to_array(m)
+          if show_all_languages?
+            model_group_by_lang(m)
+          else
+            m.unmmaped_to_array
+          end
+        end
 
         private
 
@@ -155,8 +162,18 @@ module Goo
         end
 
 
-        def literal?(object)
-          return object_language(object).nil? ? false : true
+        def show_all_languages?
+          @requested_lang.is_a?(Array) || @requested_lang.eql?(:ALL)
+        end
+
+        def get_language(languages)
+          languages = portal_language if languages.nil? || languages.empty?
+          lang = languages.to_s.split(',').map { |l| l.upcase.to_sym }
+          lang.length == 1 ? lang.first : lang
+        end
+
+        def portal_language
+          Goo.main_languages.first
         end
 
       end

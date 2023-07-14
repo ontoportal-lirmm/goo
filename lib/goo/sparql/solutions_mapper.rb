@@ -104,16 +104,6 @@ module Goo
 
       private
 
-      def get_language(languages)
-        languages = portal_language if languages.nil? || languages.empty?
-        lang = languages.split(',').map {|l| l.upcase.to_sym}
-        lang.length == 1 ? lang.first : lang
-      end
-
-      def portal_language
-        Goo.main_languages.first
-      end
-
       def init_unloaded_attributes(found, list_attributes)
         return if @incl.nil?
 
@@ -271,11 +261,7 @@ module Goo
 
       def models_unmapped_to_array(models_by_id)
         models_by_id.each do |_idm, m|
-          if is_multiple_langs?
-            @lang_filter.model_group_by_lang(m, @requested_lang)
-          else
-            m.unmmaped_to_array
-          end
+          @lang_filter.models_unmapped_to_array(m)
         end
       end
 
