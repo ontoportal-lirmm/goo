@@ -15,7 +15,7 @@ module Goo
       attr_reader :modified_attributes
       attr_reader :errors
       attr_reader :aggregates
-      attr_accessor :unmapped
+      attr_writer :unmapped
 
       attr_reader :id
 
@@ -149,6 +149,12 @@ module Goo
           cpy[attr] = v.to_a
         end
         @unmapped = cpy
+      end
+
+      def unmapped(*args)
+        @unmapped.transform_values do  |language_values|
+          self.class.not_show_all_languages?(language_values, args) ?  language_values.values.flatten: language_values
+        end
       end
 
       def delete(*args)

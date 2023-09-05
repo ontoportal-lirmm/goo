@@ -256,7 +256,12 @@ module Goo
           end
           define_method("#{attr}") do |*args|
             attr_value = self.instance_variable_get("@#{attr}")
-            attr_value = attr_value.values.first if  attr_value.is_a?(Hash) && !args.include?(:show_with_language)
+
+            if self.class.not_show_all_languages?(attr_value, args)
+              is_array = attr_value.values.first.is_a?(Array)
+              attr_value = attr_value.values.flatten
+              attr_value = attr_value.first unless is_array
+            end
 
 
             if self.class.handler?(attr)
@@ -376,6 +381,28 @@ module Goo
           instance
         end
 
+        def show_all_languages?(args)
+          args.first.is_a?(Hash) && args.first.keys.include?(:show_languages) && args.first[:show_languages]
+        end
+
+        def not_show_all_languages?(values, args)
+          values.is_a?(Hash) && !show_all_languages?(args)
+        end
+
+        private
+
+        def set_no_list_by_default(options)
+          if options[:enforce].nil? or !options[:enforce].include?(:list)
+            options[:enforce] = options[:enforce] ? (options[:enforce] << :no_list) : [:no_list]
+          end
+        end
+        def set_data_type(options)
+          if options[:type]
+            options[:enforce] += Array(options[:type])
+            options[:enforce].uniq!
+            options.delete :type
+          end
+        end
       end
     end
   end
