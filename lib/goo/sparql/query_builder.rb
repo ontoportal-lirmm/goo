@@ -288,15 +288,16 @@ module Goo
                 optional_patterns = old_patterns
                 key = @internal_variables_map.select{|key, value|  key.eql?(new_variables.last)}.keys.first
                 @internal_variables_map[key] = (already_existent_variable || new_variables.last) if key
-                variables << already_existent_variable
+
+                #variables << already_existent_variable
               else
-                variables <<  new_variables.last
+                #variables <<  new_variables.last
               end
 
             else
               quad = query_pattern(klass, attr)
               optional_patterns << quad[1]
-              variables << attr
+              #variables << attr
             end
 
             #patterns << quad[1]
@@ -398,7 +399,7 @@ module Goo
               patterns.concat(filter_patterns)
             end
           end
-          filter_variables << inspected_patterns.values.last
+          #filter_variables << inspected_patterns.values.last
         end
         [query_filter_str, patterns, optional_patterns, filter_variables]
       end
