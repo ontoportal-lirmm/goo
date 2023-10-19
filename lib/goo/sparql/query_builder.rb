@@ -29,14 +29,10 @@ module Goo
         aggregate_projections, aggregate_vars, variables, optional_patterns = get_aggregate_vars(@aggregate, @collection, graphs, @klass, @unions, variables)
         query_filter_str, patterns, optional_patterns, filter_variables =
           filter_query_strings(@collection, graphs, @klass, optional_patterns, patterns, @query_filters)
-
-
         @order_by, variables, optional_patterns = init_order_by(@count, @klass, @order_by, optional_patterns, variables,patterns, query_options, graphs)
         order_by_str, order_variables = order_by_string
-        variables, patterns = add_some_type_to_id(patterns, query_options, variables)
 
-        query_filter_str, patterns, optional_patterns, filter_variables =
-          filter_query_strings(@collection, graphs, @klass, optional_patterns, patterns, @query_filters)
+
         variables = [] if @count
         variables.delete :some_type
 
@@ -106,6 +102,9 @@ module Goo
 
       def paginate
         offset = (@page[:page_i] - 1) * @page[:page_size]
+        # fix for 4store pagination
+        offset = offset - 1 if offset.positive? && offset.eql?(@page[:page_size])
+
         @query.slice(offset, @page[:page_size])
         self
       end
@@ -150,7 +149,7 @@ module Goo
         select_vars = variables.dup
         reject_aggregations_from_vars(select_vars, aggregate_variables) if aggregate_variables
         # Fix for 4store pagination with a filter https://github.com/ontoportal-lirmm/ontologies_api/issues/25
-        select_vars = (select_vars + filter_variables + order_variables).uniq  if @page
+        # select_vars = (select_vars + filter_variables + order_variables).uniq  if @page
         @query = @query.select(*select_vars).distinct(true)
         self
       end
@@ -407,7 +406,7 @@ module Goo
               patterns.concat(filter_patterns)
             end
           end
-          #filter_variables << inspected_patterns.values.last
+          filter_variables << inspected_patterns.values.last
         end
         [query_filter_str, patterns, optional_patterns, filter_variables]
       end

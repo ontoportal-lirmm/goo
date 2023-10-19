@@ -263,11 +263,13 @@ class TestWhere < MiniTest::Unit::TestCase
   end
 
   def test_paging_with_filter_order
-    total_count = Student.where.count
-    page_1 = Student.where.page(1, total_count - 1).order_by(name: :asc).to_a
+
+    f = Goo::Filter.new(:birth_date) > DateTime.parse('1978-01-03')
+    total_count = Student.where.filter(f).count
+    page_1 = Student.where.include(:name, :birth_date).page(1, total_count - 1).filter(f).order_by(name: :asc).to_a
     refute_empty page_1
     assert page_1.next?
-    page_2 = Student.where.page(page_1.next_page, total_count - 1).order_by(name: :asc).to_a
+    page_2 = Student.where.include(:name, :birth_date).page(page_1.next_page, total_count - 1).filter(f).order_by(name: :asc).to_a
 
 
     refute_empty page_2
