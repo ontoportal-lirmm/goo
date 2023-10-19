@@ -32,13 +32,15 @@ module Goo
 
 
         @order_by, variables, optional_patterns = init_order_by(@count, @klass, @order_by, optional_patterns, variables,patterns, query_options, graphs)
+        order_by_str, order_variables = order_by_string
+        variables, patterns = add_some_type_to_id(patterns, query_options, variables)
 
         query_filter_str, patterns, optional_patterns, filter_variables =
-          filter_query_strings(@collection, graphs, internal_variables, @klass, optional_patterns, patterns, @query_filters)
+          filter_query_strings(@collection, graphs, @klass, optional_patterns, patterns, @query_filters)
         variables = [] if @count
         variables.delete :some_type
 
-        select_distinct(variables, aggregate_projections, filter_variables)
+        select_distinct(variables, aggregate_projections, filter_variables, order_variables)
           .from(graphs)
           .where(patterns)
           .union_bind_in_where(properties_to_include)
@@ -54,7 +56,10 @@ module Goo
         @query.union(*@unions) unless @unions.empty?
 
         ids_filter(ids) if ids
-        order_by if @order_by
+
+
+        @query.order_by(*order_by_str) if @order_by
+
 
         put_query_aggregate_vars(aggregate_vars) if aggregate_vars
         count if @count
@@ -116,16 +121,17 @@ module Goo
         self
       end
 
-      def order_by
-        order_by_str = @order_by.map do |attr, order|
+      def order_by_string
+        order_variables = []
+        order_str = @order_by&.map do |attr, order|
           if order.is_a?(Hash)
             sub_attr, order = order.first
             attr =  @internal_variables_map.select{ |internal_var, attr_var| attr_var.eql?({attr => sub_attr}) || attr_var.eql?(sub_attr)}.keys.last
           end
+          order_variables << attr
           "#{order.to_s.upcase}(?#{attr})"
         end
-        @query.order_by(*order_by_str)
-        self
+        [order_str,order_variables]
       end
 
       def from(graphs)
@@ -140,10 +146,11 @@ module Goo
         self
       end
 
-      def select_distinct(variables, aggregate_projections, filter_variables)
+      def select_distinct(variables, aggregate_variables, filter_variables, order_variables)
         select_vars = variables.dup
-        reject_aggregations_from_vars(select_vars, aggregate_projections) if aggregate_projections
-        select_vars = (select_vars + filter_variables).uniq  if @page # Fix for 4store pagination with a filter
+        reject_aggregations_from_vars(select_vars, aggregate_variables) if aggregate_variables
+        # Fix for 4store pagination with a filter https://github.com/ontoportal-lirmm/ontologies_api/issues/25
+        select_vars = (select_vars + filter_variables + order_variables).uniq  if @page
         @query = @query.select(*select_vars).distinct(true)
         self
       end

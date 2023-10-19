@@ -262,6 +262,17 @@ class TestWhere < MiniTest::Unit::TestCase
     end
   end
 
+  def test_paging_with_filter_order
+    total_count = Student.where.count
+    page_1 = Student.where.page(1, total_count - 1).order_by(name: :asc).to_a
+    refute_empty page_1
+    assert page_1.next?
+    page_2 = Student.where.page(page_1.next_page, total_count - 1).order_by(name: :asc).to_a
+
+
+    refute_empty page_2
+    assert_equal total_count, page_1.size + page_2.size
+  end
 
   def test_unique_object_references
 
