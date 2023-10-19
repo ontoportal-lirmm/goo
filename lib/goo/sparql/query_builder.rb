@@ -29,14 +29,10 @@ module Goo
         aggregate_projections, aggregate_vars, variables, optional_patterns = get_aggregate_vars(@aggregate, @collection, graphs, @klass, @unions, variables)
         query_filter_str, patterns, optional_patterns, filter_variables =
           filter_query_strings(@collection, graphs, @klass, optional_patterns, patterns, @query_filters)
-
-
         @order_by, variables, optional_patterns = init_order_by(@count, @klass, @order_by, optional_patterns, variables,patterns, query_options, graphs)
         order_by_str, order_variables = order_by_string
-        variables, patterns = add_some_type_to_id(patterns, query_options, variables)
 
-        query_filter_str, patterns, optional_patterns, filter_variables =
-          filter_query_strings(@collection, graphs, @klass, optional_patterns, patterns, @query_filters)
+
         variables = [] if @count
         variables.delete :some_type
 
