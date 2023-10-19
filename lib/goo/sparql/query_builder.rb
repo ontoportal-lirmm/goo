@@ -407,7 +407,7 @@ module Goo
               patterns.concat(filter_patterns)
             end
           end
-          #filter_variables << inspected_patterns.values.last
+          filter_variables << inspected_patterns.values.last
         end
         [query_filter_str, patterns, optional_patterns, filter_variables]
       end
