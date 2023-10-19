@@ -33,7 +33,8 @@ module Goo
 
         @order_by, variables, optional_patterns = init_order_by(@count, @klass, @order_by, optional_patterns, variables,patterns, query_options, graphs)
 
-
+        query_filter_str, patterns, optional_patterns, filter_variables =
+          filter_query_strings(@collection, graphs, internal_variables, @klass, optional_patterns, patterns, @query_filters)
         variables = [] if @count
         variables.delete :some_type
 
