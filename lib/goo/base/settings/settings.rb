@@ -255,9 +255,18 @@ module Goo
             self.instance_variable_set("@#{attr}",value)
           end
           define_method("#{attr}") do |*args|
+            attr_value = self.instance_variable_get("@#{attr}")
+
+            if self.class.not_show_all_languages?(attr_value, args)
+              is_array = attr_value.values.first.is_a?(Array)
+              attr_value = attr_value.values.flatten
+              attr_value = attr_value.first unless is_array
+            end
+
+
             if self.class.handler?(attr)
               if @loaded_attributes.include?(attr)
-                return self.instance_variable_get("@#{attr}")
+                return attr_value
               end
               value = self.send("#{self.class.handler(attr)}")
               self.instance_variable_set("@#{attr}",value)
@@ -266,7 +275,7 @@ module Goo
             end
 
             if (not @persistent) or @loaded_attributes.include?(attr)
-              return self.instance_variable_get("@#{attr}")
+                return attr_value
             else
               # TODO: bug here when no labels from one of the main_lang available... (when it is called by ontologies_linked_data ontologies_submission)
               raise Goo::Base::AttributeNotLoaded, "Attribute `#{attr}` is not loaded for #{self.id}. Loaded attributes: #{@loaded_attributes.inspect}."
@@ -372,6 +381,28 @@ module Goo
           instance
         end
 
+        def show_all_languages?(args)
+          args.first.is_a?(Hash) && args.first.keys.include?(:include_languages) && args.first[:include_languages]
+        end
+
+        def not_show_all_languages?(values, args)
+          values.is_a?(Hash) && !show_all_languages?(args)
+        end
+
+        private
+
+        def set_no_list_by_default(options)
+          if options[:enforce].nil? or !options[:enforce].include?(:list)
+            options[:enforce] = options[:enforce] ? (options[:enforce] << :no_list) : [:no_list]
+          end
+        end
+        def set_data_type(options)
+          if options[:type]
+            options[:enforce] += Array(options[:type])
+            options[:enforce].uniq!
+            options.delete :type
+          end
+        end
       end
     end
   end
