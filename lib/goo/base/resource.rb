@@ -74,23 +74,10 @@ module Goo
       end
 
       def id
-        if @id.nil?
-          raise IDGenerationError, ":id must be set if configured in name_with" if self.class.name_with == :id
-          custom_name = self.class.name_with
-          if custom_name.instance_of?(Symbol)
-            @id = id_from_attribute()
-          elsif custom_name
-            begin
-              @id = custom_name.call(self)
-            rescue => e
-              raise IDGenerationError, "Problem with custom id generation: #{e.message}"
-            end
-          else
-            raise IDGenerationError, "custom_name is nil. settings for this model are incorrect."
+        @id = generate_id if @id.nil?
+
+        @id
           end
-        end
-        return @id
-      end
 
       def persistent?
         return @persistent
@@ -104,22 +91,20 @@ module Goo
         return modified_attributes.length > 0
       end
 
-      def exist?(from_valid=false)
-        #generate id with proc
-        begin
-          id() unless self.class.name_with.kind_of?(Symbol)
-        rescue IDGenerationError
-        end
+      def exist?(from_valid = false)
+          begin
+          id unless self.class.name_with.kind_of?(Symbol)
+          rescue IDGenerationError
+          # Ignored
+          end
 
         _id = @id
-        if _id.nil? && !from_valid && self.class.name_with.is_a?(Symbol)
-          begin
-            _id = id_from_attribute()
-          rescue IDGenerationError
-          end
+        if from_valid || _id.nil?
+          _id = generate_id rescue _id = nil
         end
+
         return false unless _id
-        return Goo::SPARQL::Queries.model_exist(self,id=_id)
+        Goo::SPARQL::Queries.model_exist(self, id = _id)
       end
 
       def fully_loaded?
@@ -247,10 +232,13 @@ module Goo
           raise ArgumentError, "Enums can only be created on initialization" unless opts[0] && opts[0][:init_enum]
         end
         batch_file = nil
-        if opts && opts.length > 0
-          if opts.first.is_a?(Hash) && opts.first[:batch] && opts.first[:batch].is_a?(File)
+        callbacks = true
+        if opts && opts.length > 0 && opts.first.is_a?(Hash)
+          if opts.first[:batch] && opts.first[:batch].is_a?(File)
             batch_file = opts.first[:batch]
           end
+
+          callbacks = opts.first[:callbacks]
         end
 
         if !batch_file
@@ -258,8 +246,28 @@ module Goo
           raise Goo::Base::NotValidException, "Object is not valid. Check errors." unless valid?
         end
 
+        #set default values before saving
+        unless self.persistent?
+          self.class.attributes_with_defaults.each do |attr|
+            value = self.send("#{attr}")
+            if value.nil?
+              value = self.class.default(attr).call(self)
+              self.send("#{attr}=", value)
+            end
+          end
+        end
+
+        #call update callback before saving
+        if callbacks
+          self.class.attributes_with_update_callbacks.each do |attr|
+            Goo::Validators::Enforce.enforce_callbacks(self, attr)
+          end
+        end
+
         graph_insert, graph_delete = Goo::SPARQL::Triples.model_update_triples(self)
-        graph = self.graph()
+        graph = self.graph
+
+
         if graph_delete and graph_delete.size > 0
           begin
             Goo.sparql_update_client.delete_data(graph_delete, graph: graph)
@@ -442,10 +450,30 @@ module Goo
       end
 
       protected
+
       def id_from_attribute()
         uattr = self.class.name_with
         uvalue = self.send("#{uattr}")
-        return self.class.id_from_unique_attribute(uattr,uvalue)
+        return self.class.id_from_unique_attribute(uattr, uvalue)
+      end
+
+      def generate_id
+        return nil unless self.class.name_with
+
+        raise IDGenerationError, ":id must be set if configured in name_with" if self.class.name_with == :id
+        custom_name = self.class.name_with
+        if custom_name.instance_of?(Symbol)
+          id = id_from_attribute
+        elsif custom_name
+          begin
+            id = custom_name.call(self)
+          rescue => e
+            raise IDGenerationError, "Problem with custom id generation: #{e.message}"
+          end
+        else
+          raise IDGenerationError, "custom_name is nil. settings for this model are incorrect."
+        end
+        id
       end
 
     end
