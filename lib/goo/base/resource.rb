@@ -15,7 +15,7 @@ module Goo
       attr_reader :modified_attributes
       attr_reader :errors
       attr_reader :aggregates
-      attr_reader :unmapped
+      attr_writer :unmapped
 
       attr_reader :id
 
@@ -119,15 +119,27 @@ module Goo
 
       def unmapped_set(attribute,value)
         @unmapped ||= {}
-        (@unmapped[attribute] ||= Set.new) << value
+        @unmapped[attribute] ||= Set.new
+        @unmapped[attribute].merge(Array(value)) unless value.nil?
+      end
+ 
+      def unmapped_get(attribute)
+        @unmapped[attribute]
       end
 
       def unmmaped_to_array
         cpy = {}
+        
         @unmapped.each do |attr,v|
           cpy[attr] = v.to_a
         end
         @unmapped = cpy
+      end
+
+      def unmapped(*args)
+        @unmapped.transform_values do  |language_values|
+          self.class.not_show_all_languages?(language_values, args) ?  language_values.values.flatten: language_values
+        end
       end
 
       def delete(*args)
@@ -349,13 +361,13 @@ module Goo
 
 
 
-      def self.map_attributes(inst,equivalent_predicates=nil)
+      def self.map_attributes(inst,equivalent_predicates=nil, include_languages: false)
         if (inst.kind_of?(Goo::Base::Resource) && inst.unmapped.nil?) ||
           (!inst.respond_to?(:unmapped) && inst[:unmapped].nil?)
           raise ArgumentError, "Resource.map_attributes only works for :unmapped instances"
         end
         klass = inst.respond_to?(:klass) ? inst[:klass] : inst.class
-        unmapped = inst.respond_to?(:klass) ? inst[:unmapped] : inst.unmapped
+        unmapped = inst.respond_to?(:klass) ? inst[:unmapped] : inst.unmapped(include_languages: include_languages)
         list_attrs = klass.attributes(:list)
         unmapped_string_keys = Hash.new
         unmapped.each do |k,v|
@@ -386,31 +398,18 @@ module Goo
               object = unmapped_string_keys[attr_uri]
             end
 
-            lang_filter = Goo::SPARQL::Solution::LanguageFilter.new
-
-            object = object.map do |o|
-              if o.is_a?(RDF::URI)
-                o
-              else
-                literal = o
-                index, lang_val  = lang_filter.main_lang_filter inst.id.to_s, attr, literal
-                lang_val.to_s if index.eql? :no_lang
-              end
-            end
-
-            object = object.compact
-
-            other_languages_values = lang_filter.other_languages_values
-            other_languages_values = other_languages_values[inst.id.to_s][attr] unless other_languages_values.empty?
-            unless other_languages_values.nil?
-              object = lang_filter.languages_values_to_set(other_languages_values, object)
+            if object.is_a?(Hash)
+              object = object.transform_values{|values| Array(values).map{|o|o.is_a?(RDF::URI) ? o : o.object}}
+            else
+              object = object.map {|o| o.is_a?(RDF::URI) ? o : o.object}
             end
 
             if klass.range(attr)
               object = object.map { |o|
                 o.is_a?(RDF::URI) ? klass.range_object(attr,o) : o }
             end
-            object = object.first unless list_attrs.include?(attr)
+
+            object = object.first unless list_attrs.include?(attr) || include_languages
             if inst.respond_to?(:klass)
               inst[attr] = object
             else
@@ -419,11 +418,6 @@ module Goo
           else
             inst.send("#{attr}=",
                       list_attrs.include?(attr) ? [] : nil, on_load: true)
-            if inst.id.to_s == "http://purl.obolibrary.org/obo/IAO_0000415"
-              if attr == :definition
-                # binding.pry
-              end
-            end
           end
 
         end
