@@ -102,9 +102,6 @@ module Goo
 
       def paginate
         offset = (@page[:page_i] - 1) * @page[:page_size]
-        # fix for 4store pagination
-        offset = offset - 1 if offset.positive? && offset.eql?(@page[:page_size])
-
         @query.slice(offset, @page[:page_size])
         self
       end
@@ -149,7 +146,7 @@ module Goo
         select_vars = variables.dup
         reject_aggregations_from_vars(select_vars, aggregate_variables) if aggregate_variables
         # Fix for 4store pagination with a filter https://github.com/ontoportal-lirmm/ontologies_api/issues/25
-        # select_vars = (select_vars + filter_variables + order_variables).uniq  if @page
+        select_vars = (select_vars + filter_variables + order_variables).uniq  if @page
         @query = @query.select(*select_vars).distinct(true)
         self
       end

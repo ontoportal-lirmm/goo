@@ -400,6 +400,7 @@ module Goo
           instance
         end
 
+
         def show_all_languages?(args)
           args.first.is_a?(Hash) && args.first.keys.include?(:include_languages) && args.first[:include_languages]
         end
