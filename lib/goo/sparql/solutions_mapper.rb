@@ -72,7 +72,7 @@ module Goo
           end
 
           objects, objects_new = get_value_object(id, objects_new, object, list_attributes, predicate)
-          add_object_to_model(id, objects, predicate)
+          add_object_to_model(id, objects, object, predicate)
         end
       
         # for this moment we are not going to enrich models , maybe we will use it if the results are empty  
@@ -156,8 +156,8 @@ module Goo
 
           if object.nil?
             object = pre.nil? ? [] : pre
-          else
-            object = pre.nil? ? [object] : (pre.dup << object)
+          else            
+            object = pre.nil? ? [object] : (Array(pre).dup << object)
             object.uniq!
           end
 
@@ -165,22 +165,22 @@ module Goo
         [object, objects_new]
       end
 
-      def add_object_to_model(id, objects, predicate)
+      def add_object_to_model(id, objects, current_obj, predicate)
 
         if @models_by_id[id].respond_to?(:klass)
           @models_by_id[id][predicate] = objects unless objects.nil? && !@models_by_id[id][predicate].nil?
         elsif !@models_by_id[id].class.handler?(predicate) &&
               !(objects.nil? && !@models_by_id[id].instance_variable_get("@#{predicate}").nil?) &&
               predicate != :id
-          @lang_filter.set_model_value(@models_by_id[id], predicate, objects)
+          @lang_filter.set_model_value(@models_by_id[id], predicate, objects, current_obj)
         end
       end
 
       def get_preload_value(id, object, predicate)
         pre_val = nil
         if predicate_preloaded?(id, predicate)
-          pre_val = preloaded_value(id, predicate)          
-          pre_val = pre_val.select { |x|  x.id  == object  }.first if pre_val.is_a?(Array)
+          pre_val = preloaded_value(id, predicate)
+          pre_val = pre_val.select { |x| x.respond_to?(:id) && (x.id == object) }.first if pre_val.is_a?(Array)
         end
         pre_val
       end

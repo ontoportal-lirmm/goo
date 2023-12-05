@@ -25,8 +25,8 @@ module Goo
         end
 
 
-        def set_model_value(model, predicate, values)
-          set_value(model, predicate, values) do
+        def set_model_value(model, predicate, values, value)
+          set_value(model, predicate, value) do
             model.send("#{predicate}=", values, on_load: true)
           end
         end
