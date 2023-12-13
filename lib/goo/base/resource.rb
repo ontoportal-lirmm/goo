@@ -379,17 +379,17 @@ module Goo
           attr_uri = klass.attribute_uri(attr,inst.collection).to_s
           if unmapped_string_keys.include?(attr_uri.to_s) ||
             (equivalent_predicates && equivalent_predicates.include?(attr_uri))
-            object = nil
             if !unmapped_string_keys.include?(attr_uri)
-              equivalent_predicates[attr_uri].each do |eq_attr|
-                if object.nil? and !unmapped_string_keys[eq_attr].nil?
-                  object = unmapped_string_keys[eq_attr].dup
-                else
-                  if object.is_a?Array
-                    object.concat(unmapped_string_keys[eq_attr]) if !unmapped_string_keys[eq_attr].nil?
-                  end
+              object = Array(equivalent_predicates[attr_uri].map { |eq_attr| unmapped_string_keys[eq_attr] }).flatten.compact
+              if include_languages && [RDF::URI, Hash].all?{|c| object.map(&:class).include?(c)}
+                object = object.reduce({})  do |all, new_v|
+                  new_v =  { none: [new_v] } if new_v.is_a?(RDF::URI)
+                  all.merge(new_v) {|_, a, b| a + b }
                 end
+              elsif include_languages
+                object = object.first
               end
+
               if object.nil?
                 inst.send("#{attr}=", list_attrs.include?(attr) ? [] : nil, on_load: true)
                 next
