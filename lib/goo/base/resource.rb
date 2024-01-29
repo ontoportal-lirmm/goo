@@ -378,25 +378,26 @@ module Goo
           next if inst.class.collection?(attr) #collection is already there
           next unless inst.respond_to?(attr)
           attr_uri = klass.attribute_uri(attr,inst.collection).to_s
-          if unmapped_string_keys.include?(attr_uri.to_s) ||
-            (equivalent_predicates && equivalent_predicates.include?(attr_uri))
-            if !unmapped_string_keys.include?(attr_uri)
-              object = Array(equivalent_predicates[attr_uri].map { |eq_attr| unmapped_string_keys[eq_attr] }).flatten.compact
-              if include_languages && [RDF::URI, Hash].all?{|c| object.map(&:class).include?(c)}
-                object = object.reduce({})  do |all, new_v|
-                  new_v =  { none: [new_v] } if new_v.is_a?(RDF::URI)
-                  all.merge(new_v) {|_, a, b| a + b }
+          if unmapped_string_keys.include?(attr_uri.to_s) || equivalent_predicates&.include?(attr_uri)
+            object = nil
+
+            if unmapped_string_keys.include?(attr_uri)
+              object = unmapped_string_keys[attr_uri]
+            else
+              equivalent_predicates[attr_uri].each do |eq_attr|
+                next if unmapped_string_keys[eq_attr].nil?
+
+                if object.nil?
+                  object = unmapped_string_keys[eq_attr].dup
+                elsif object.is_a?(Array)
+                  object.concat(unmapped_string_keys[eq_attr])
                 end
-              elsif include_languages
-                object = object.first
               end
 
               if object.nil?
                 inst.send("#{attr}=", list_attrs.include?(attr) ? [] : nil, on_load: true)
                 next
               end
-            else
-              object = unmapped_string_keys[attr_uri]
             end
 
             if object.is_a?(Hash)
