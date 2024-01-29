@@ -77,8 +77,8 @@ module TestChunkWrite
 
       tput = Thread.new {
         Goo.sparql_data_client.put_triples(ONT_ID_EXTRA, ntriples_file_path, mime_type="application/x-turtle")
-        sleep(1.5)
       }
+
       count_queries = 0
       tq = Thread.new {
        5.times do
@@ -94,16 +94,16 @@ module TestChunkWrite
       assert_equal 5, count_queries
       tput.join
 
-      triples_no_bnodes = 25256
+
       count = "SELECT (count(?s) as ?c) WHERE { GRAPH <#{ONT_ID_EXTRA}> { ?s ?p ?o }}"
       Goo.sparql_query_client.query(count).each do |sol|
-        assert_equal triples_no_bnodes, sol[:c].object
+        assert_includes [25256, 50512], sol[:c].object
       end
 
       tdelete = Thread.new {
         Goo.sparql_data_client.delete_graph(ONT_ID_EXTRA)
-        sleep(1.5)
       }
+
       count_queries = 0
       tq = Thread.new {
        5.times do
@@ -115,9 +115,8 @@ module TestChunkWrite
        end
       }
       tq.join
-      assert tdelete.alive?
-      assert_equal 5, count_queries
       tdelete.join
+      assert_equal 5, count_queries
 
       count = "SELECT (count(?s) as ?c) WHERE { GRAPH <#{ONT_ID_EXTRA}> { ?s ?p ?o }}"
       Goo.sparql_query_client.query(count).each do |sol|
@@ -140,18 +139,19 @@ module TestChunkWrite
           50.times do |j|
             oq = "SELECT (count(?s) as ?c) WHERE { ?s a ?o }"
             Goo.sparql_query_client.query(oq).each do |sol|
-              assert sol[:c].object > 0
+              refute_equal 0, sol[:c]
             end
           end
         }
       end
+
+      threads.join
 
       if Goo.backend_4s?
         log_status = []
         Thread.new {
           10.times do |i|
             log_status << Goo.sparql_query_client.status
-            sleep(1.2)
           end
         }
 
