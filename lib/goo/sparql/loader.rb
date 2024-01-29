@@ -138,7 +138,6 @@ module Goo
           properties_to_include = {}
           incl.each do |attr|
             graph, pattern = query_pattern(klass, attr, collection: collection)
-            add_rules(attr, klass, query_options)
             if klass.attributes(:all).include?(attr)
               properties_to_include[attr] = { uri: pattern[1], is_inverse: klass.inverse?(attr) } # [property_attr, property_uri , inverse: true]
             end

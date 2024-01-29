@@ -14,7 +14,6 @@ module Goo
         @unions = options[:unions] || []
         @aggregate = options[:aggregate]
         @collection = options[:collection]
-        @model_query_options = options[:query_options]
         @enable_rules = options[:rules]
         @order_by = options[:order_by]
         @internal_variables_map = {}
@@ -61,16 +60,6 @@ module Goo
         count if @count
         paginate if @page
 
-        ## TODO see usage of rules and query_options
-        query_options.merge!(@model_query_options) if @model_query_options
-        query_options[:rules] = [:NONE] unless @enable_rules
-        query_options = nil if query_options.empty?
-        if query_options
-          query_options[:rules] = query_options[:rules]&.map { |x| x.to_s }.join('+')
-        else
-          query_options = { rules: ['NONE'] }
-        end
-        @query.options[:query_options] = query_options
         [@query, aggregate_projections]
       end
 
@@ -182,7 +171,7 @@ module Goo
           @internal_variables_map[new_internal_var] = value.empty? ? attr : {attr => value}
         end
 
-        add_rules(attr, klass, query_options)
+
         graph, pattern =
           query_pattern(klass, attr, value: new_internal_var, subject: subject, collection: collection)
         if pattern
