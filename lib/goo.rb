@@ -12,6 +12,7 @@ require 'redis'
 require 'uuid'
 require "cube"
 
+require_relative "goo/config/config"
 require_relative "goo/sparql/sparql"
 require_relative "goo/search/search"
 require_relative "goo/base/base"
@@ -50,6 +51,31 @@ module Goo
   @@use_cache = false
 
   @@slice_loading_size = 500
+
+
+
+  def self.log_debug_file(str)
+    debug_file = "./queries.txt"
+    File.write(debug_file, str.to_s + "\n", mode: 'a')
+  end
+
+
+
+  def backend_4s?
+    sparql_backend_name.downcase.eql?("4store")
+  end
+
+  def backend_ag?
+    sparql_backend_name.downcase.eql?("allegrograph")
+  end
+
+  def backend_gb?
+    sparql_backend_name.downcase.eql?("graphdb")
+  end
+
+  def backend_vo?
+    sparql_backend_name.downcase.eql?("virtuoso")
+  end
 
 
   def self.main_languages
@@ -108,16 +134,6 @@ module Goo
                    cube_options: @@cube_options})
     @@sparql_backends[name][:backend_name] = opts[:backend_name]
     @@sparql_backends.freeze
-  end
-
-  def self.test_reset
-    if @@sparql_backends[:main][:query].url.to_s["localhost"].nil?
-      raise Exception, "only for testing"
-    end
-    @@sparql_backends[:main][:query]=Goo::SPARQL::Client.new("http://localhost:9000/sparql/",
-                 {protocol: "1.1", "Content-Type" => "application/x-www-form-urlencoded",
-                   read_timeout: 300,
-                  redis_cache: @@redis_client })
   end
 
   def self.main_lang
