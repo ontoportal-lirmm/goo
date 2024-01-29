@@ -3,39 +3,36 @@ module Goo
     class SolutionMapper
       BNODES_TUPLES = Struct.new(:id, :attribute)
 
-      def initialize(aggregate_projections, bnode_extraction, embed_struct,
-                      incl_embed, klass_struct, models_by_id,
-                     properties_to_include, unmapped, variables, ids, options)
+      def initialize(aggregate_projections, bnode_extraction, embed_struct,incl_embed, klass_struct, models_by_id, variables, options)
 
         @aggregate_projections = aggregate_projections
         @bnode_extraction = bnode_extraction
         @embed_struct = embed_struct
         @incl_embed = incl_embed
+        @incl = options[:include]
         @klass_struct = klass_struct
         @models_by_id = models_by_id
-        @properties_to_include = properties_to_include
-        @unmapped = unmapped
+        @properties_to_include = options[:properties_to_include]
+        @unmapped = options[:include] && options[:include].first.eql?(:unmapped)
         @variables = variables
-        @ids = ids
+        @ids = models_by_id.keys
         @klass = options[:klass]
         @read_only = options[:read_only]
-        @incl = options[:include]
         @count = options[:count]
         @collection = options[:collection]
         @options = options
       end
-      
+
       def map_each_solutions(select)
         found = Set.new
         objects_new = {}
         list_attributes = Set.new(@klass.attributes(:list))
-        all_attributes = Set.new(@klass.attributes(:all))
 
         @lang_filter = Goo::SPARQL::Solution::LanguageFilter.new(requested_lang: @options[:requested_lang].to_s, unmapped: @unmapped,
-           list_attributes: list_attributes)
-        
+                                                                 list_attributes: list_attributes)
+
         select.each_solution do |sol|
-          
+
           next if sol[:some_type] && @klass.type_uri(@collection) != sol[:some_type]
           return sol[:count_var].object if @count
 
@@ -59,26 +56,32 @@ module Goo
             next
           end
 
-          predicate = sol[:attributeProperty].to_s.to_sym
+          predicates = find_predicate(sol[:attributeProperty], inverse: !sol[:inverseAttributeObject].nil?)
+          next if predicates.empty?
 
-          next if predicate.nil? || !all_attributes.include?(predicate)
+          object = if sol[:attributeObject]
+                     sol[:attributeObject]
+                   elsif sol[:inverseAttributeObject]
+                     sol[:inverseAttributeObject]
+                   end
 
-          object = sol[:attributeObject]
 
-          # bnodes
-          if bnode_id?(object, predicate)
-            objects_new = bnode_id_tuple(id, object, objects_new, predicate)
-            next
+          predicates.each do |predicate|
+            # bnodes
+            if bnode_id?(object, predicate)
+              objects_new = bnode_id_tuple(id, object, objects_new, predicate)
+              next
+            end
+
+            objects, objects_new = get_value_object(id, objects_new, object, list_attributes, predicate)
+            add_object_to_model(id, objects, object, predicate)
           end
 
-          objects, objects_new = get_value_object(id, objects_new, object, list_attributes, predicate)
-          add_object_to_model(id, objects, object, predicate)
         end
-      
-        # for this moment we are not going to enrich models , maybe we will use it if the results are empty  
+        # for this moment we are not going to enrich models , maybe we will use it if the results are empty
         @lang_filter.fill_models_with_all_languages(@models_by_id)
 
-        init_unloaded_attributes(found, list_attributes)
+        init_unloaded_attributes(list_attributes)
 
         return @models_by_id if @bnode_extraction
 
@@ -97,19 +100,30 @@ module Goo
         include_bnodes(blank_nodes, @models_by_id) unless blank_nodes.empty?
 
         models_unmapped_to_array(@models_by_id) if @unmapped
-        
-       
+
+
         @models_by_id
       end
 
       private
 
-      def init_unloaded_attributes(found, list_attributes)
-        return if @incl.nil?
+      def find_predicate(predicate, unmapped: false, inverse: false)
+        if Goo.backend_4s? || Goo.backend_gb?
+          return [] if predicate.nil? || unmapped && @properties_to_include[predicate].nil?
+          predicate = predicate.to_s.to_sym
+        else
+          predicate = @properties_to_include.select { |x, v| v[:uri].to_s.eql?(predicate.to_s) || v[:equivalents]&.any? { |e| e.to_s.eql?(predicate.to_s) } }
+          return [] if predicate.empty?
 
+          predicate = predicate.select{|x, y| y[:is_inverse]&.eql?(inverse)}.keys
+        end
+        Array(predicate)
+      end
+
+      def init_unloaded_attributes(list_attributes)
+        return if @incl.nil? || @incl.empty?
         # Here we are setting to nil all attributes that have been included but not found in the triplestore
-        found.uniq.each do |model_id|
-          m = @models_by_id[model_id]
+        @models_by_id.each do |id, m|
           @incl.each do |attr_to_incl|
             is_handler = m.respond_to?(:handler?) && m.class.handler?(attr_to_incl)
             next if attr_to_incl.to_s.eql?('unmapped') || is_handler
@@ -133,7 +147,7 @@ module Goo
       def get_value_object(id, objects_new, object, list_attributes, predicate)
         object = object.object if object && !(object.is_a? RDF::URI)
         range_for_v = @klass.range(predicate)
-       
+
 
         if object.is_a?(RDF::URI) && (predicate != :id) && !range_for_v.nil?
           if objects_new.include?(object)
@@ -156,7 +170,7 @@ module Goo
 
           if object.nil?
             object = pre.nil? ? [] : pre
-          else            
+          else
             object = pre.nil? ? [object] : (Array(pre).dup << object)
             object.uniq!
           end
@@ -170,8 +184,8 @@ module Goo
         if @models_by_id[id].respond_to?(:klass)
           @models_by_id[id][predicate] = objects unless objects.nil? && !@models_by_id[id][predicate].nil?
         elsif !@models_by_id[id].class.handler?(predicate) &&
-              !(objects.nil? && !@models_by_id[id].instance_variable_get("@#{predicate}").nil?) &&
-              predicate != :id
+          !(objects.nil? && !@models_by_id[id].instance_variable_get("@#{predicate}").nil?) &&
+          predicate != :id
           @lang_filter.set_model_value(@models_by_id[id], predicate, objects, current_obj)
         end
       end
@@ -329,7 +343,7 @@ module Goo
             collection_attribute = obj_new[:klass].collection_opts
             obj_new[collection_attribute] = collection_value
           elsif obj_new.class.respond_to?(:collection_opts) &&
-                obj_new.class.collection_opts.instance_of?(Symbol)
+            obj_new.class.collection_opts.instance_of?(Symbol)
             collection_attribute = obj_new.class.collection_opts
             obj_new.send("#{collection_attribute}=", collection_value)
           end
@@ -370,8 +384,8 @@ module Goo
             if objects_new.include?(object)
               object = objects_new[object]
             elsif !range_for_v.inmutable?
-              pre_val = get_pre_val(id, models_by_id, object, v, read_only)
-              object = get_object_from_range(pre_val, embed_struct, object, objects_new, v, options)
+              pre_val = get_pre_val(id, models_by_id, object, v)
+              object = get_object_from_range(pre_val, embed_struct, object, objects_new, v)
             else
               object = range_for_v.find(object).first
             end
@@ -399,8 +413,8 @@ module Goo
       def get_pre_val(id, models_by_id, object, predicate)
         pre_val = nil
         if models_by_id[id] &&
-           ((models_by_id[id].respond_to?(:klass) && models_by_id[id]) ||
-             models_by_id[id].loaded_attributes.include?(predicate))
+          ((models_by_id[id].respond_to?(:klass) && models_by_id[id]) ||
+            models_by_id[id].loaded_attributes.include?(predicate))
           pre_val = if !@read_only
                       models_by_id[id].instance_variable_get("@#{predicate}")
                     else
@@ -413,13 +427,17 @@ module Goo
       end
 
       def add_unmapped_to_model(sol)
-        predicate = sol[:attributeProperty].to_s.to_sym
-        return unless @properties_to_include[predicate]
-
-        id = sol[:id]
-        value = sol[:attributeObject]
-
-        @lang_filter.set_unmapped_value(@models_by_id[id], @properties_to_include[predicate][:uri], value)
+        predicates = find_predicate(sol[:attributeProperty])
+        predicates.each do |predicate|
+          if Goo.backend_4s? || Goo.backend_gb?
+            predicate = @properties_to_include[predicate][:uri]
+          else
+            predicate = sol[:attributeProperty]
+          end
+          id = sol[:id]
+          value = sol[:attributeObject]
+          @lang_filter.set_unmapped_value(@models_by_id[id], predicate, value)
+        end
       end
 
       def add_aggregations_to_model(sol)

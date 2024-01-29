@@ -14,29 +14,31 @@ module Goo
         @unions = options[:unions] || []
         @aggregate = options[:aggregate]
         @collection = options[:collection]
-        @model_query_options = options[:query_options]
         @enable_rules = options[:rules]
         @order_by = options[:order_by]
         @internal_variables_map = {}
+        @equivalent_predicates = options[:equivalent_predicates]
+        @properties_to_include = options[:properties_to_include]
         @query = get_client
       end
 
-      def build_select_query(ids, variables, graphs, patterns,
-                             query_options, properties_to_include)
+      def build_query(ids, variables, graphs, patterns)
+        query_options = {}
 
+        expand_equivalent_predicates(@properties_to_include, @equivalent_predicates)
+
+        properties_to_include = @properties_to_include
         patterns = graph_match(@collection, @graph_match, graphs, @klass, patterns, query_options, @unions)
         variables, patterns = add_some_type_to_id(patterns, query_options, variables)
         aggregate_projections, aggregate_vars, variables, optional_patterns = get_aggregate_vars(@aggregate, @collection, graphs, @klass, @unions, variables)
         query_filter_str, patterns, optional_patterns, filter_variables =
           filter_query_strings(@collection, graphs, @klass, optional_patterns, patterns, @query_filters)
         @order_by, variables, optional_patterns = init_order_by(@count, @klass, @order_by, optional_patterns, variables,patterns, query_options, graphs)
-        order_by_str, order_variables = order_by_string
-
 
         variables = [] if @count
         variables.delete :some_type
 
-        select_distinct(variables, aggregate_projections, filter_variables, order_variables)
+        select_distinct(variables, aggregate_projections, filter_variables)
           .from(graphs)
           .where(patterns)
           .union_bind_in_where(properties_to_include)
@@ -54,43 +56,43 @@ module Goo
         ids_filter(ids) if ids
 
 
-        @query.order_by(*order_by_str) if @order_by
+        @query.order_by(*order_by_string) if @order_by
 
 
         put_query_aggregate_vars(aggregate_vars) if aggregate_vars
         count if @count
         paginate if @page
 
-        ## TODO see usage of rules and query_options
-        query_options.merge!(@model_query_options) if @model_query_options
-        query_options[:rules] = [:NONE] unless @enable_rules
-        query_options = nil if query_options.empty?
-        if query_options
-          query_options[:rules] = query_options[:rules]&.map { |x| x.to_s }.join('+')
-        else
-          query_options = { rules: ['NONE'] }
-        end
-        @query.options[:query_options] = query_options
         [@query, aggregate_projections]
       end
 
       def union_bind_in_where(properties)
         binding_as = []
-        properties.each do |property_attr, property|
-          predicates = [property[:uri]] + (property[:equivalents] || [])
-          options = {
-            binds: [{ value: property_attr, as: :attributeProperty }]
-          }
-          subject = property[:subject] || :id
-          predicates.uniq.each do |predicate_uri|
-            pattern = if property[:is_inverse]
-                        [:attributeObject, predicate_uri, subject]
-                      else
-                        [subject, predicate_uri, :attributeObject]
-                      end
-            binding_as << [[pattern], options]
+        if Goo.backend_4s? || Goo.backend_gb?
+          properties.each do |property_attr, property|
+            predicates = [property[:uri]] + (property[:equivalents] || [])
+            options = {
+              binds: [{ value: property_attr, as: :attributeProperty }]
+            }
+            subject = property[:subject] || :id
+            predicates.uniq.each do |predicate_uri|
+              pattern = if property[:is_inverse]
+                          [:attributeObject, predicate_uri, subject]
+                        else
+                          [subject, predicate_uri, :attributeObject]
+                        end
+              binding_as << [[pattern], options]
+            end
           end
+
+        else
+          direct_predicate, inverse_predicate = include_properties
+          direct_filter = direct_predicate.empty? ? [] : [{ values: direct_predicate, predicate: :attributeProperty }]
+          inverse_filter = inverse_predicate.empty? ? [] : [{ values: inverse_predicate, predicate: :attributeProperty }]
+          binding_as << [[[:id, :attributeProperty, :attributeObject]], { filters:  direct_filter}] unless direct_filter.empty?
+          binding_as << [[[:inverseAttributeObject, :attributeProperty, :id]], { filters: inverse_filter}] unless inverse_filter.empty?
         end
+
         @query.optional_union_with_bind_as(*binding_as) unless binding_as.empty?
         self
       end
@@ -127,7 +129,7 @@ module Goo
           order_variables << attr
           "#{order.to_s.upcase}(?#{attr})"
         end
-        [order_str,order_variables]
+        order_str
       end
 
       def from(graphs)
@@ -142,11 +144,11 @@ module Goo
         self
       end
 
-      def select_distinct(variables, aggregate_variables, filter_variables, order_variables)
+      def select_distinct(variables, aggregate_patterns, filter_variables)
+        variables << :inverseAttributeObject if inverse_predicate?
         select_vars = variables.dup
-        reject_aggregations_from_vars(select_vars, aggregate_variables) if aggregate_variables
-        # Fix for 4store pagination with a filter https://github.com/ontoportal-lirmm/ontologies_api/issues/25
-        select_vars = (select_vars + filter_variables + order_variables).uniq  if @page
+        reject_aggregations_from_vars(select_vars, aggregate_patterns) if aggregate_patterns
+        select_vars = (select_vars + filter_variables).uniq  if @page && Goo.backend_4s? # Fix for 4store pagination with a filter
         @query = @query.select(*select_vars).distinct(true)
         self
       end
@@ -163,6 +165,16 @@ module Goo
       end
 
       private
+
+      def include_properties
+        direct_predicates = @properties_to_include.select { |_, property| !property[:is_inverse] }.map { |_, property| [property[:uri]] + (property[:equivalents] || []) }.flatten
+        inverse_predicates = @properties_to_include.select { |_, property| property[:is_inverse] }.map { |_, property| [property[:uri]] + (property[:equivalents] || []) }.flatten
+        [direct_predicates, inverse_predicates]
+      end
+
+      def inverse_predicate?
+        @properties_to_include.any? { |_, property| property[:is_inverse] }
+      end
 
       def patterns_for_match(klass, attr, value, graphs, patterns, unions,
                              internal_variables, subject = :id, in_union = false,
@@ -182,7 +194,7 @@ module Goo
           @internal_variables_map[new_internal_var] = value.empty? ? attr : {attr => value}
         end
 
-        add_rules(attr, klass, query_options)
+
         graph, pattern =
           query_pattern(klass, attr, value: new_internal_var, subject: subject, collection: collection)
         if pattern
@@ -370,7 +382,7 @@ module Goo
             else
               value = RDF::Literal.new(filter_operation.value)
               if filter_operation.value.is_a? String
-                value = RDF::Literal.new(filter_operation.value, :datatype => RDF::XSD.string)
+                value = RDF::Literal.new(filter_operation.value)
               end
               filter_operations << (
                 "?#{filter_var.to_s} #{sparql_op_string(filter_operation.operator)} " +
@@ -403,7 +415,7 @@ module Goo
               patterns.concat(filter_patterns)
             end
           end
-          filter_variables << inspected_patterns.values.last
+          #filter_variables << inspected_patterns.values.last
         end
         [query_filter_str, patterns, optional_patterns, filter_variables]
       end
@@ -423,6 +435,16 @@ module Goo
 
       def internal_variables
         @internal_variables_map.keys
+      end
+
+      def expand_equivalent_predicates(query_properties, eq_p)
+
+        return unless eq_p && !eq_p.empty?
+
+        query_properties&.each do |_, property|
+          property_uri = property[:uri]
+          property[:equivalents] = eq_p[property_uri.to_s].to_a.map { |p| RDF::URI.new(p) } if eq_p.include?(property_uri.to_s)
+        end
       end
     end
   end
