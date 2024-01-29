@@ -1,7 +1,5 @@
 require_relative 'test_case'
 
-GooTest.configure_goo
-
 module TestChunkWrite
   ONT_ID = "http:://example.org/data/nemo"
   ONT_ID_EXTRA = "http:://example.org/data/nemo/extra"

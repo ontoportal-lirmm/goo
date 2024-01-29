@@ -1,6 +1,6 @@
 require_relative 'test_case'
 
-GooTest.configure_goo
+module TestSchemaless
 
 module TestSChemaless
 
