@@ -53,6 +53,31 @@ module Goo
   @@slice_loading_size = 500
 
 
+
+  def self.log_debug_file(str)
+    debug_file = "./queries.txt"
+    File.write(debug_file, str.to_s + "\n", mode: 'a')
+  end
+
+
+
+  def backend_4s?
+    sparql_backend_name.downcase.eql?("4store")
+  end
+
+  def backend_ag?
+    sparql_backend_name.downcase.eql?("allegrograph")
+  end
+
+  def backend_gb?
+    sparql_backend_name.downcase.eql?("graphdb")
+  end
+
+  def backend_vo?
+    sparql_backend_name.downcase.eql?("virtuoso")
+  end
+
+
   def self.main_languages
     @@main_languages
   end
