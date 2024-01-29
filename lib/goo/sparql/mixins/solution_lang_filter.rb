@@ -95,7 +95,7 @@ module Goo
 
           return requested_lang.include?(language)  if requested_lang.is_a?(Array)
 
-          language.eql?(requested_lang)
+          language&.upcase.eql?(requested_lang)
         end
 
         def literal?(object)
