@@ -14,7 +14,6 @@ module Goo
         "text/x-nquads" => "nquads"
       }
 
-      BACKEND_4STORE = "4store"
 
       def status_based_sleep_time(operation)
         sleep(0.5)
@@ -39,16 +38,17 @@ module Goo
       end
 
       class DropGraph
-        def initialize(g)
+        def initialize(g, silent: false)
           @graph = g
           @caching_options = { :graph => @graph.to_s }
+          @silent = silent
         end
         def to_s
-          return "DROP GRAPH <#{@graph.to_s}>"
+          "DROP #{@silent ? 'SILENT' : ''} GRAPH <#{@graph.to_s}>"
         end
         def options
           #Returns the caching option
-          return @caching_options
+          @caching_options
         end
       end
 
@@ -77,7 +77,7 @@ module Goo
       end
 
       def delete_data_graph(graph)
-        Goo.sparql_update_client.update(DropGraph.new(graph))
+        Goo.sparql_update_client.update(DropGraph.new(graph, silent: Goo.backend_vo?))
       end
 
       def append_triples_no_bnodes(graph,file_path,mime_type_in)
@@ -184,8 +184,6 @@ module Goo
         resp
       end
 
-      private
-
       def execute_append_request(graph, data_file, mime_type_in)
         mime_type = "text/turtle"
 
@@ -195,9 +193,8 @@ module Goo
         end
 
         params = {method: :post, url: "#{url.to_s}", headers: {"content-type" => mime_type, "mime-type" => mime_type}, timeout: nil}
-        backend_name = Goo.sparql_backend_name
-
-        if backend_name == BACKEND_4STORE
+        
+        if Goo.backend_4s?
           params[:payload] = {
             graph: graph.to_s,
             data: data_file,
@@ -205,6 +202,9 @@ module Goo
           }
           #for some reason \\\\ breaks parsing
           params[:payload][:data] = params[:payload][:data].split("\n").map { |x| x.sub("\\\\","") }.join("\n")
+        elsif Goo.backend_vo?
+          params[:url] = "http://localhost:8890/sparql-graph-crud?graph=#{CGI.escape(graph.to_s)}"
+          params[:payload] = data_file
         else
           params[:url] << "?context=#{CGI.escape("<#{graph.to_s}>")}"
           params[:payload] = data_file
