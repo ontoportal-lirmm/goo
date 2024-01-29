@@ -102,16 +102,6 @@ module Goo
         def set_request_lang(options)
           options[:requested_lang] = RequestStore.store[:requested_lang]
         end
-        def expand_equivalent_predicates(properties_to_include, eq_p)
-
-          return unless eq_p && !eq_p.empty?
-
-          properties_to_include&.each do |property_attr, property|
-            property_uri = property[:uri]
-            property[:equivalents] = eq_p[property_uri.to_s].to_a.map { |p| RDF::URI.new(p) } if eq_p.include?(property_uri.to_s)
-          end
-
-        end
 
         def predicate_map(predicates)
           predicates_map = nil

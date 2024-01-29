@@ -17,12 +17,17 @@ module Goo
         @enable_rules = options[:rules]
         @order_by = options[:order_by]
         @internal_variables_map = {}
+        @equivalent_predicates = options[:equivalent_predicates]
+        @properties_to_include = options[:properties_to_include]
         @query = get_client
       end
 
-      def build_select_query(ids, variables, graphs, patterns,
-                             query_options, properties_to_include)
+      def build_query(ids, variables, graphs, patterns)
+        query_options = {}
 
+        expand_equivalent_predicates(@properties_to_include, @equivalent_predicates)
+
+        properties_to_include = @properties_to_include
         patterns = graph_match(@collection, @graph_match, graphs, @klass, patterns, query_options, @unions)
         variables, patterns = add_some_type_to_id(patterns, query_options, variables)
         aggregate_projections, aggregate_vars, variables, optional_patterns = get_aggregate_vars(@aggregate, @collection, graphs, @klass, @unions, variables)
@@ -412,6 +417,16 @@ module Goo
 
       def internal_variables
         @internal_variables_map.keys
+      end
+
+      def expand_equivalent_predicates(query_properties, eq_p)
+
+        return unless eq_p && !eq_p.empty?
+
+        query_properties&.each do |_, property|
+          property_uri = property[:uri]
+          property[:equivalents] = eq_p[property_uri.to_s].to_a.map { |p| RDF::URI.new(p) } if eq_p.include?(property_uri.to_s)
+        end
       end
     end
   end
