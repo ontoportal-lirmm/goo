@@ -184,7 +184,7 @@ module Goo
         resp
       end
 
-      def execute_append_request(graph, data_file, mime_type_in)
+      def params_for_backend(graph, data_file, mime_type_in, method = :post)
         mime_type = "text/turtle"
 
         if mime_type_in == "text/x-nquads"
@@ -192,8 +192,8 @@ module Goo
           graph = "http://data.bogus.graph/uri"
         end
 
-        params = {method: :post, url: "#{url.to_s}", headers: {"content-type" => mime_type, "mime-type" => mime_type}, timeout: nil}
-        
+        params = {method: method, url: "#{url.to_s}", headers: {"content-type" => mime_type, "mime-type" => mime_type}, timeout: nil}
+
         if Goo.backend_4s?
           params[:payload] = {
             graph: graph.to_s,
@@ -209,8 +209,11 @@ module Goo
           params[:url] << "?context=#{CGI.escape("<#{graph.to_s}>")}"
           params[:payload] = data_file
         end
+        params
+      end
 
-        RestClient::Request.execute(params)
+      def execute_append_request(graph, data_file, mime_type_in)
+        RestClient::Request.execute(params_for_backend(graph, data_file, mime_type_in))
       end
     end
   end

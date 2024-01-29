@@ -1,8 +1,8 @@
 require_relative 'test_case'
 
 module TestChunkWrite
-  ONT_ID = "http:://example.org/data/nemo"
-  ONT_ID_EXTRA = "http:://example.org/data/nemo/extra"
+  ONT_ID = "http://example.org/data/nemo"
+  ONT_ID_EXTRA = "http://example.org/data/nemo/extra"
 
   class TestChunkWrite < MiniTest::Unit::TestCase
 
@@ -18,14 +18,14 @@ module TestChunkWrite
       _delete
     end
 
+    def setup
+      self.class._delete
+    end
+
+
     def self._delete
-      graphs = [ONT_ID,ONT_ID_EXTRA]
-      url = Goo.sparql_data_client.url
-      graphs.each do |graph|
-        # This bypasses the chunks stuff
-        params = { method: :delete, url: "#{url.to_s}#{graph.to_s}", timeout: nil }
-        RestClient::Request.execute(params)
-      end
+      graphs = [ONT_ID, ONT_ID_EXTRA]
+      graphs.each { |graph| Goo.sparql_data_client.delete_graph(graph) }
     end
 
     def test_put_data
@@ -72,14 +72,7 @@ module TestChunkWrite
       ntriples_file_path = "./test/data/nemo_ontology.ntriples"
 
       # Bypass in chunks
-      url = Goo.sparql_data_client.url
-      params = {
-        method: :put,
-        url: "#{url.to_s}#{ONT_ID}",
-        payload: File.read(ntriples_file_path),
-        headers: {content_type: "application/x-turtle"},
-        timeout: nil
-      }
+      params = self.class.params_for_backend(:post, ONT_ID, ntriples_file_path)
       RestClient::Request.execute(params)
 
       tput = Thread.new {
@@ -134,16 +127,7 @@ module TestChunkWrite
 
     def test_query_flood
       ntriples_file_path = "./test/data/nemo_ontology.ntriples"
-
-      # Bypass in chunks
-      url = Goo.sparql_data_client.url
-      params = {
-        method: :put,
-        url: "#{url.to_s}#{ONT_ID}",
-        payload: File.read(ntriples_file_path),
-        headers: {content_type: "application/x-turtle"},
-        timeout: nil
-      }
+      params = self.class.params_for_backend(:post, ONT_ID, ntriples_file_path)
       RestClient::Request.execute(params)
 
       tput = Thread.new {
@@ -162,21 +146,27 @@ module TestChunkWrite
         }
       end
 
-      log_status = []
-      Thread.new {
-        10.times do |i|
-          log_status << Goo.sparql_query_client.status
-          sleep(1.2)
+      if Goo.backend_4s?
+        log_status = []
+        Thread.new {
+          10.times do |i|
+            log_status << Goo.sparql_query_client.status
+            sleep(1.2)
+          end
+        }
+
+        threads.each do |t|
+          t.join
         end
-      }
+        tput.join
 
-      threads.each do |t|
-        t.join
+        assert log_status.map { |x| x[:outstanding] }.max > 0
+        assert_equal 16, log_status.map { |x| x[:running] }.max
       end
-      tput.join
+    end
 
-      assert log_status.map { |x| x[:outstanding] }.max > 0
-      assert_equal 16, log_status.map { |x| x[:running] }.max
+    def self.params_for_backend(method, graph_name, ntriples_file_path = nil)
+      Goo.sparql_data_client.params_for_backend(graph_name, File.read(ntriples_file_path), "text/turtle", method)
     end
 
   end
