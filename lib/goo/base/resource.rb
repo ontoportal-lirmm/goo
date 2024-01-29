@@ -289,7 +289,8 @@ module Goo
               batch_file.write(lines.join(""))
               batch_file.flush()
             else
-              Goo.sparql_update_client.insert_data(graph_insert, graph: graph)
+              data = graph_insert.to_a.reduce("") { |acc, x| acc << x.to_s + " " }
+              Goo.sparql_data_client.execute_append_request(graph, data, "application/x-turtle")
             end
           rescue Exception => e
             raise e
