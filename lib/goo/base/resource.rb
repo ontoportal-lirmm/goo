@@ -169,6 +169,10 @@ module Goo
         @persistent = false
         @modified = true
 
+        if self.class.after_destroy?
+          self.class.call_after_destroy(self)
+        end
+
         return nil
       end
 
@@ -302,6 +306,10 @@ module Goo
 
         @modified_attributes = Set.new
         @persistent = true
+
+        if self.class.after_save?
+          self.class.call_after_save(self)
+        end
 
         return self
       end
