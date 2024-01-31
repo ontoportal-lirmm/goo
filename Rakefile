@@ -51,12 +51,6 @@ Rake::TestTask.new do |t|
 end
 
 Rake::TestTask.new do |t|
-  t.name = "test:inmutable"
-  t.test_files = FileList['test/test_inmutable.rb']
-  t.warning = false
-end
-
-Rake::TestTask.new do |t|
   t.name = "test:inverse"
   t.test_files = FileList['test/test_inverse.rb']
   t.warning = false

@@ -152,7 +152,7 @@ module Goo
         if object.is_a?(RDF::URI) && (predicate != :id) && !range_for_v.nil?
           if objects_new.include?(object)
             object = objects_new[object]
-          elsif !range_for_v.inmutable?
+          else
             pre_val = get_preload_value(id, object, predicate)
             object, objects_new = if !@read_only
                                     preloaded_or_new_object(object, objects_new, pre_val, predicate)
@@ -160,8 +160,6 @@ module Goo
                                     # depedent read only
                                     preloaded_or_new_struct(object, objects_new, pre_val, predicate)
                                   end
-          else
-            object = range_for_v.find(object).first
           end
         end
 
@@ -383,11 +381,9 @@ module Goo
           if range_for_v
             if objects_new.include?(object)
               object = objects_new[object]
-            elsif !range_for_v.inmutable?
+            else
               pre_val = get_pre_val(id, models_by_id, object, v)
               object = get_object_from_range(pre_val, embed_struct, object, objects_new, v)
-            else
-              object = range_for_v.find(object).first
             end
           end
         end
