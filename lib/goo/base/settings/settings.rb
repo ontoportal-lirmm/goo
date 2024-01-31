@@ -169,7 +169,7 @@ module Goo
         def not_show_all_languages?(values, args)
           values.is_a?(Hash) && !show_all_languages?(args)
         end
-
+        
       end
     end
   end
