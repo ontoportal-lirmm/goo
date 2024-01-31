@@ -33,10 +33,6 @@ module Goo
 
           # a hash with options is expected
           options = args.last
-          @inmutable = (args.include? :inmutable)
-          if @inmutable
-            @inm_instances = nil
-          end
 
           @model_settings = default_model_options.merge(options || {})
 
@@ -133,10 +129,6 @@ module Goo
 
         def attribute_loaded?(attr)
           @loaded_attributes.include?(attr)
-        end
-
-        def inm_instances
-          @inm_instances
         end
 
         def struct_object(attrs)
