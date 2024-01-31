@@ -170,6 +170,16 @@ module Goo
           values.is_a?(Hash) && !show_all_languages?(args)
         end
 
+        def attributes_with_callbacks
+          (@model_settings[:attributes].
+            select{ |attr,opts| opts[:onUpdate] }).keys
+        end
+
+
+        def update_callbacks(attr)
+          @model_settings[:attributes][attr][:onUpdate]
+        end
+
       end
     end
   end

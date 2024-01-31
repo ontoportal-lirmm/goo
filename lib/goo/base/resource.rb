@@ -259,7 +259,7 @@ module Goo
 
         #call update callback before saving
         if callbacks
-          self.class.attributes_with_update_callbacks.each do |attr|
+          self.class.attributes_with_callbacks.each do |attr|
             Goo::Validators::Enforce.enforce_callbacks(self, attr)
           end
         end
