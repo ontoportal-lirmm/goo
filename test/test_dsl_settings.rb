@@ -63,7 +63,7 @@ class YamlSchemeModelTest < Goo::Base::Resource
 end
 
 
-class TestDSLSeeting < MiniTest::Unit::TestCase
+class TestDSLSetting < MiniTest::Unit::TestCase
   def initialize(*args)
     super(*args)
   end

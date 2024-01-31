@@ -1,5 +1,6 @@
 require 'active_support/core_ext/string'
 require_relative 'yaml_settings'
+require_relative 'hooks'
 require_relative 'attribute'
 
 module Goo
@@ -15,8 +16,7 @@ module Goo
         attr_reader :attribute_uris
         attr_reader :namespace
 
-        include YAMLScheme
-        include AttributeSettings
+        include YAMLScheme ,AttributeSettings, Hooks
 
         def default_model_options
           {name_with: lambda {|x| uuid_uri_generator(x)}}
@@ -168,16 +168,6 @@ module Goo
 
         def not_show_all_languages?(values, args)
           values.is_a?(Hash) && !show_all_languages?(args)
-        end
-
-        def attributes_with_callbacks
-          (@model_settings[:attributes].
-            select{ |attr,opts| opts[:onUpdate] }).keys
-        end
-
-
-        def update_callbacks(attr)
-          @model_settings[:attributes][attr][:onUpdate]
         end
 
       end

@@ -1,9 +1,11 @@
+require_relative '../utils/callbacks_utils'
 
 module Goo
   module Validators
     module Enforce
 
       class EnforceInstance
+        include CallbackRunner
         attr_reader :errors_by_opt
         def initialize
           @errors_by_opt = {}
@@ -67,7 +69,7 @@ module Goo
         end
 
         def enforce_callback(inst, attr)
-          callbacks = Array(inst.class.update_callbacks(attr))
+          callbacks = Array(inst.class.attribute_callbacks(attr))
           callbacks.each do |proc|
             if instance_proc?(inst, proc)
               call_proc(inst.method(proc), inst, attr)
@@ -85,10 +87,6 @@ module Goo
 
         def object_type?(opt)
           opt.respond_to?(:shape_attribute) ? opt : Goo.model_by_name(opt)
-        end
-
-        def instance_proc?(inst, opt)
-          opt && (opt.is_a?(Symbol) || opt.is_a?(String)) && inst.respond_to?(opt)
         end
 
         def check_object_type(inst, attr, value, opt)
