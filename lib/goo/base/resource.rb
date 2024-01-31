@@ -168,7 +168,7 @@ module Goo
         end
         @persistent = false
         @modified = true
-        self.class.load_inmutable_instances if self.class.inmutable? && self.class.inm_instances
+
         return nil
       end
 
@@ -259,7 +259,7 @@ module Goo
 
         #call update callback before saving
         if callbacks
-          self.class.attributes_with_update_callbacks.each do |attr|
+          self.class.attributes_with_callbacks.each do |attr|
             Goo::Validators::Enforce.enforce_callbacks(self, attr)
           end
         end
@@ -302,7 +302,7 @@ module Goo
 
         @modified_attributes = Set.new
         @persistent = true
-        self.class.load_inmutable_instances if self.class.inmutable? && self.class.inm_instances
+
         return self
       end
 
@@ -427,11 +427,6 @@ module Goo
       def self.find(id, *options)
         id = RDF::URI.new(id) if !id.instance_of?(RDF::URI) && self.name_with == :id
         id = id_from_unique_attribute(name_with(),id) unless id.instance_of?(RDF::URI)
-        if self.inmutable? && self.inm_instances && self.inm_instances[id]
-          w = Goo::Base::Where.new(self)
-          w.instance_variable_set("@result", [self.inm_instances[id]])
-          return w
-        end
         options_load = { ids: [id], klass: self }.merge(options[-1] || {})
         options_load[:find] = true
         where = Goo::Base::Where.new(self)
