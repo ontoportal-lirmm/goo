@@ -11,7 +11,6 @@ module SOLR
       if response.code.to_i == 200
         @schema = JSON.parse(response.body)["schema"]
       else
-        binding.pry
         raise StandardError, "Failed to upload schema. HTTP #{response.code}: #{response.message}"
       end
     end
@@ -191,7 +190,6 @@ module SOLR
       if response.code.to_i == 200
         response
       else
-        binding.pry
         raise StandardError, "Failed to upload schema. HTTP #{response.code}: #{response.message}"
       end
     end
