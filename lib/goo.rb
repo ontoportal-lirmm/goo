@@ -99,7 +99,7 @@ module Goo
   end
 
   def self.add_namespace(shortcut, namespace,default=false)
-    if !(namespace.instance_of? RDF::Vocabulary)
+    unless namespace.instance_of? RDF::Vocabulary
       raise ArgumentError, "Namespace must be a RDF::Vocabulary object"
     end
     @@namespaces[shortcut.to_sym] = namespace
@@ -250,11 +250,7 @@ module Goo
       raise ArgumentError, "Configuration needs to receive a code block"
     end
     yield self
-    configure_sanity_check()
-
-    if @@search_backends.length > 0
-      @@search_backends.each { |name, val| @@search_connection[name] = RSolr.connect(url: search_conf(name), timeout: 1800, open_timeout: 1800) }
-    end
+    configure_sanity_check
 
     @@namespaces.freeze
     @@sparql_backends.freeze
@@ -278,8 +274,26 @@ module Goo
     return @@search_backends[name][:service]
   end
 
-  def self.search_connection(name=:main)
-    return @@search_connection[name]
+  def self.search_connection(collection_name)
+    return search_client(collection_name).solr
+  end
+
+  def self.search_client(collection_name)
+    return @@search_connection[collection_name]
+  end
+
+  def self.add_search_connection(collection_name, search_backend = :main, &block)
+    unless @@search_connection[collection_name]
+      @@search_connection[collection_name] = SOLR::SolrConnector.new(search_conf(search_backend), collection_name)
+
+      if block_given?
+        block.call
+        @@search_connection[collection_name].enable_custom_schema
+      end
+
+      @@search_connection[collection_name].init
+    end
+    @@search_connection[collection_name]
   end
 
   def self.sparql_query_client(name=:main)
