@@ -5,7 +5,7 @@ module TestSearch
   class TermSearch < Goo::Base::Resource
     model :term_search, name_with: :id
     attribute :prefLabel, enforce: [:existence]
-    attribute :synonym  # array of strings
+    attribute :synonym, enforce: [:list] # array of strings
     attribute :definition  # array of strings
     attribute :submissionAcronym, enforce: [:existence]
     attribute :submissionId, enforce: [:existence, :integer]
@@ -14,6 +14,47 @@ module TestSearch
     attribute :semanticType
     attribute :cui
 
+    enable_indexing(:term_search) do
+      schema_generator.add_field(:prefLabel, 'text_general', indexed: true, stored: true, multi_valued: false)
+      schema_generator.add_field(:synonym, 'text_general', indexed: true, stored: true, multi_valued: true)
+      schema_generator.add_field(:notation, 'text_general', indexed: true, stored: true, multi_valued: false)
+
+      schema_generator.add_field(:definition, 'string', indexed: true, stored: true, multi_valued: true)
+      schema_generator.add_field(:submissionAcronym, 'string', indexed: true, stored: true, multi_valued: false)
+      schema_generator.add_field(:parents, 'string', indexed: true, stored: true, multi_valued: true)
+      #schema_generator.add_field(:ontologyType, 'ontologyType', indexed: true, stored: true, multi_valued: false)
+      schema_generator.add_field(:ontologyId, 'string', indexed: true, stored: true, multi_valued: false)
+      schema_generator.add_field(:submissionId, 'pint', indexed: true, stored: true, multi_valued: false)
+      schema_generator.add_field(:childCount, 'pint', indexed: true, stored: true, multi_valued: false)
+
+      schema_generator.add_field(:cui, 'text_general', indexed: true, stored: true, multi_valued: true)
+      schema_generator.add_field(:semanticType, 'text_general', indexed: true, stored: true, multi_valued: true)
+
+      schema_generator.add_field(:property, 'text_general', indexed: true, stored: true, multi_valued: true)
+      schema_generator.add_field(:propertyRaw, 'text_general', indexed: false, stored: true, multi_valued: false)
+
+      schema_generator.add_field(:obsolete, 'boolean', indexed: true, stored: true, multi_valued: false)
+      schema_generator.add_field(:provisional, 'boolean', indexed: true, stored: true, multi_valued: false)
+
+      # Copy fields for term search
+      schema_generator.add_copy_field('prefLabel', '_text_')
+      schema_generator.add_copy_field('prefLabel', 'prefLabel_Exact')
+      schema_generator.add_copy_field('prefLabel', 'prefLabel_Suggest')
+      schema_generator.add_copy_field('prefLabel', 'prefLabel_SuggestEdge')
+      schema_generator.add_copy_field('prefLabel', 'prefLabel_SuggestNgram')
+
+      schema_generator.add_copy_field('synonym', '_text_')
+      schema_generator.add_copy_field('synonym', 'synonym_Exact')
+      schema_generator.add_copy_field('synonym', 'synonym_Suggest')
+      schema_generator.add_copy_field('synonym', 'synonym_SuggestEdge')
+      schema_generator.add_copy_field('synonym', 'synonym_SuggestNgram')
+
+      schema_generator.add_copy_field('notation', '_text_')
+
+      schema_generator.add_copy_field('prefLabel_*', 'prefLabel')
+      schema_generator.add_copy_field('synonym_*', 'synonym')
+    end
+
     def index_id()
       "#{self.id.to_s}_#{self.submissionAcronym}_#{self.submissionId}"
     end
@@ -21,6 +62,36 @@ module TestSearch
     def index_doc(to_set = nil)
       self.to_hash
     end
+  end
+
+  class TermSearch2 < Goo::Base::Resource
+    model :term_search2, name_with: :prefLabel
+    attribute :prefLabel, enforce: [:existence], fuzzy_search: true
+    attribute :synonym, enforce: [:list]
+    attribute :definition
+    attribute :submissionAcronym, enforce: [:existence]
+    attribute :submissionId, enforce: [:existence, :integer]
+    attribute :private, enforce: [:boolean], default: false, index: false
+    # Dummy attributes to validate non-searchable files
+    attribute :semanticType
+    attribute :cui
+
+    enable_indexing(:test_solr)
+  end
+
+  class TermSearch3 < Goo::Base::Resource
+    model :term_search3, name_with: :prefLabel
+    attribute :prefLabel, enforce: [:existence]
+    attribute :synonym, enforce: [:list]
+    attribute :definition
+    attribute :submissionAcronym, enforce: [:existence]
+    attribute :submissionId, enforce: [:existence, :integer]
+    attribute :private, enforce: [:boolean], default: false, index: false
+    # Dummy attributes to validate non-searchable files
+    attribute :semanticType
+    attribute :cui
+
+    enable_indexing(:test_solr)
   end
 
   class TestModelSearch < MiniTest::Unit::TestCase
@@ -141,6 +212,66 @@ module TestSearch
       TermSearch.indexCommit()
       resp = TermSearch.search("*:*")
       assert_equal 0, resp["response"]["docs"].length
+    end
+
+    def test_index_on_save_delete
+      TermSearch2.find("test").first&.delete
+      TermSearch3.find("test2").first&.delete
+
+      term = TermSearch2.new(prefLabel: "test",
+                            submissionId: 1,
+                            definition: "definition of test",
+                            synonym: ["synonym1", "synonym2"],
+                            submissionAcronym: "test",
+                            private: true
+      )
+
+      term2 = TermSearch3.new(prefLabel: "test2",
+                              submissionId: 1,
+                              definition: "definition of test2",
+                              synonym: ["synonym1", "synonym2"],
+                              submissionAcronym: "test",
+                              private: true
+      )
+
+      term.save
+      term2.save
+
+      # set as not indexed in model definition
+      refute_includes TermSearch2.search_client.fetch_all_fields.map{|f| f["name"]}, "private_b"
+      refute_includes TermSearch2.search_client.fetch_all_fields.map{|f| f["name"]}, "private_b"
+
+
+      indexed_term = TermSearch2.search("id:#{term.id.to_s.gsub(":", "\\:")}")["response"]["docs"].first
+      indexed_term2 = TermSearch3.search("id:#{term2.id.to_s.gsub(":", "\\:")}")["response"]["docs"].first
+
+      term.indexable_object.each do |k, v|
+        assert_equal v, indexed_term[k.to_s]
+      end
+
+      term2.indexable_object.each do |k, v|
+        assert_equal v, indexed_term2[k.to_s]
+      end
+
+      term2.definition = "new definition of test2"
+      term2.synonym = ["new synonym1", "new synonym2"]
+      term2.save
+
+      indexed_term2 = TermSearch3.search("id:#{term2.id.to_s.gsub(":", "\\:")}")["response"]["docs"].first
+
+      term2.indexable_object.each do |k, v|
+        assert_equal v, indexed_term2[k.to_s]
+      end
+
+      term2.delete
+      term.delete
+
+      indexed_term = TermSearch2.search("id:#{term.id.to_s.gsub(":", "\\:")}")["response"]["docs"].first
+      indexed_term2 = TermSearch3.search("id:#{term2.id.to_s.gsub(":", "\\:")}")["response"]["docs"].first
+
+      assert_nil indexed_term
+      assert_nil indexed_term2
+
     end
   end
 

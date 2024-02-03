@@ -10,15 +10,10 @@ services:
       retries: 30
 
   solr-ut:
-    image: ontoportal/solr-ut:0.0.2
+    image: solr:8.11.2
     ports:
       - 8983:8983
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8983/solr/term_search_core1/admin/ping?wt=json | grep -iq '\"status\":\"OK\"}'  || exit 1"]
-      start_period: 10s
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    command: bin/solr start -cloud -f
 
   agraph-ut:
     image: franzinc/agraph:v8.0.0.rc1
