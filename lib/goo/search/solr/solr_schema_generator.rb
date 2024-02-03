@@ -8,14 +8,18 @@ module SOLR
       @schema = {}
     end
 
-    def add_field(name, type, indexed: true, stored: true, multi_valued: false)
+    def add_field(name, type, indexed: true, stored: true, multi_valued: false, omit_norms: nil)
       @schema['add-field'] ||= []
-      @schema['add-field'] << { name: name.to_s, type: type, indexed: indexed, stored: stored, multiValued: multi_valued }
+      af = { name: name.to_s, type: type, indexed: indexed, stored: stored, multiValued: multi_valued}
+      af[:omitNorms] = omit_norms unless omit_norms.nil?
+      @schema['add-field'] << af
     end
 
-    def add_dynamic_field(name, type, indexed: true, stored: true, multi_valued: false)
+    def add_dynamic_field(name, type, indexed: true, stored: true, multi_valued: false, omit_norms: nil)
       @schema['add-dynamic-field'] ||= []
-      @schema['add-dynamic-field'] << { name: name.to_s, type: type, indexed: indexed, stored: stored, multiValued: multi_valued }
+      df = { name: name.to_s, type: type, indexed: indexed, stored: stored, multiValued: multi_valued }
+      df[:omitNorms] = omit_norms unless omit_norms.nil?
+      @schema['add-dynamic-field'] << df
     end
 
     def add_copy_field(source, dest)
