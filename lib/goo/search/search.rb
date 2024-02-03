@@ -1,4 +1,5 @@
 require 'rsolr'
+require_relative 'solr/solr_connector'
 
 module Goo
 
