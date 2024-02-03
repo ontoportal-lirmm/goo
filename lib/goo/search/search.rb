@@ -9,102 +9,124 @@ module Goo
       base.extend(ClassMethods)
     end
 
-    def index(connection_name=:main)
+    def index(connection_name = nil, to_set = nil)
       raise ArgumentError, "ID must be set to be able to index" if @id.nil?
-      doc = indexable_object
-      Goo.search_connection(connection_name).add(doc)
+      document = indexable_object(to_set)
+      connection_name ||= self.class.search_collection_name
+      unindex(connection_name)
+      self.class.search_client(connection_name).index_document(document)
     end
 
-    def index_update(to_set, connection_name=:main)
-      raise ArgumentError, "ID must be set to be able to index" if @id.nil?
-      raise ArgumentError, "Field names to be updated in index must be provided" if to_set.nil?
-      doc = indexable_object(to_set)
 
-      doc.each { |key, val|
-        next if key === :id
-        doc[key] = {set: val}
-      }
-
-      Goo.search_connection(connection_name).update(
-          data: "[#{doc.to_json}]",
-          headers: { 'Content-Type' => 'application/json' }
-      )
-    end
-
-    def unindex(connection_name=:main)
-      id = index_id
-      Goo.search_connection(connection_name).delete_by_id(id)
+    def unindex(connection_name = nil)
+      connection_name ||= self.class.search_collection_name
+      self.class.search_client(connection_name).delete_by_id(index_id)
     end
 
     # default implementation, should be overridden by child class
-    def index_id()
+    def index_id
       raise ArgumentError, "ID must be set to be able to index" if @id.nil?
       @id.to_s
     end
 
     # default implementation, should be overridden by child class
-    def index_doc(to_set=nil)
+    def index_doc(to_set = nil)
       raise NoMethodError, "You must define method index_doc in your class for it to be indexable"
     end
 
-    def indexable_object(to_set=nil)
-      doc = index_doc(to_set)
-      # use resource_id for the actual term id because :id is a Solr reserved field
-      doc[:resource_id] = doc[:id].to_s
-      doc[:id] = index_id.to_s
-      doc
-    end
+    def indexable_object(to_set = nil)
+      begin
+        document = index_doc(to_set)
+      rescue
+        document = self.to_hash.reject { |k, _| !self.class.indexable?(k) }
+      end
 
+      model_name = self.class.model_name.to_s.downcase
+      document.delete(:id)
+      document.delete("id")
+
+      document.transform_keys! do |k|
+        self.class.index_document_attr(k)
+      end
+
+      document[:resource_id] = self.id.to_s
+      document[:resource_model] = model_name
+      document[:id] = index_id.to_s
+      document
+    end
 
     module ClassMethods
 
-      def search(q, params={}, connection_name=:main)
-        params["q"] = q
-        Goo.search_connection(connection_name).post('select', :data => params)
-      end
+      def enable_indexing(collection_name, search_backend = :main, &block)
+        @model_settings[:search_collection] = collection_name
 
-      def indexBatch(collection, connection_name=:main)
-        docs = Array.new
-        collection.each do |c|
-          docs << c.indexable_object
+        if block_given?
+          # optional block to generate custom schema
+          Goo.add_search_connection(collection_name, search_backend) do
+            class_eval(&block)
+          end
+        else
+          Goo.add_search_connection(collection_name, search_backend)
         end
-        Goo.search_connection(connection_name).add(docs)
+
+        after_save :index
+        after_destroy :unindex
       end
 
-      def unindexBatch(collection, connection_name=:main)
-        docs = Array.new
-        collection.each do |c|
-          docs << c.index_id
-        end
-        Goo.search_connection(connection_name).delete_by_id(docs)
+      def search_collection_name
+        @model_settings[:search_collection]
       end
 
-      def unindexByQuery(query, connection_name=:main)
-        Goo.search_connection(connection_name).delete_by_query(query)
+      def search_client(connection_name = search_collection_name)
+        Goo.search_client(connection_name)
       end
 
-      # Get the doc that will be indexed in solr
-      def get_indexable_object()
-        # To make the code less readable the guys that wrote it managed to hide the real function called by this line
-        # It is "get_index_doc" in ontologies_linked_data Class.rb
-        doc = self.class.model_settings[:search_options][:document].call(self)
-        doc[:resource_id] = doc[:id].to_s
-        doc[:id] = get_index_id.to_s
-        # id: clsUri_ONTO-ACRO_submissionNumber. i.e.: http://lod.nal.usda.gov/nalt/5260_NALT_4
-        doc
+      def custom_schema?(connection_name = search_collection_name)
+        search_client(connection_name).custom_schema?
       end
 
-      def indexCommit(attrs=nil, connection_name=:main)
-        Goo.search_connection(connection_name).commit(:commit_attributes => attrs || {})
+      def schema_generator
+        Goo.search_client(search_collection_name).schema_generator
       end
 
-      def indexOptimize(attrs=nil, connection_name=:main)
-        Goo.search_connection(connection_name).optimize(:optimize_attributes => attrs || {})
+      def index_document_attr(key)
+        return key.to_s if custom_schema?
+
+        type = self.datatype(key)
+        is_list = self.list?(key)
+        fuzzy = self.fuzzy_searchable?(key)
+        search_client.index_document_attr(key, type, is_list, fuzzy)
       end
 
-      def indexClear(connection_name=:main)
-        # WARNING: this deletes ALL data from the index
-        unindexByQuery("*:*", connection_name)
+      def search(q, params = {}, connection_name = search_collection_name)
+        search_client(connection_name).search(q, params)
+      end
+
+      def indexBatch(collection, connection_name = search_collection_name)
+        docs = collection.map(&:indexable_object)
+        search_client(connection_name).index_document(docs)
+      end
+
+      def unindexBatch(collection, connection_name = search_collection_name)
+        docs = collection.map(&:index_id)
+        search_client(connection_name).delete_by_id(docs)
+      end
+
+      def unindexByQuery(query, connection_name = search_collection_name)
+        search_client(connection_name).delete_by_query(query)
+      end
+
+      def indexCommit(attrs = nil, connection_name = search_collection_name)
+        search_client(connection_name).index_commit(attrs)
+      end
+
+      def indexOptimize(attrs = nil, connection_name = search_collection_name)
+        search_client(connection_name).optimize(attrs)
+      end
+
+      # WARNING: this deletes ALL data from the index
+      def indexClear(connection_name = search_collection_name)
+        search_client(connection_name).clear_all_data
       end
     end
   end

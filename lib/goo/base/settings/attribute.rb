@@ -158,11 +158,6 @@ module Goo
           attribute_settings(attr)[:enforce].include?(:list)
         end
 
-        def index_attribute?(attr)
-          return false if attribute_settings(attr).nil?
-          attribute_settings(attr)[:index]
-        end
-
         def transitive?(attr)
           return false unless @model_settings[:attributes].include?(attr)
           attribute_settings(attr)[:transitive] == true
@@ -211,6 +206,17 @@ module Goo
 
           Goo.vocabulary(nil)[attr]
         end
+
+
+        def indexable?(attr)
+          setting = attribute_settings(attr.to_sym)
+          setting  && (setting[:index].nil? || setting[:index] == true)
+        end
+
+        def fuzzy_searchable?(attr)
+          attribute_settings(attr)[:fuzzy_search] == true
+        end
+
 
         private
 
