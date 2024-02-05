@@ -14,33 +14,30 @@ module TestSearch
     attribute :semanticType
     attribute :cui
 
-    enable_indexing(:term_search) do
+    enable_indexing(:term_search) do | schema_generator |
       schema_generator.add_field(:prefLabel, 'text_general', indexed: true, stored: true, multi_valued: false)
       schema_generator.add_field(:synonym, 'text_general', indexed: true, stored: true, multi_valued: true)
-      schema_generator.add_field(:notation, 'text_general', indexed: true, stored: true, multi_valued: false)
-
       schema_generator.add_field(:definition, 'string', indexed: true, stored: true, multi_valued: true)
       schema_generator.add_field(:submissionAcronym, 'string', indexed: true, stored: true, multi_valued: false)
-      schema_generator.add_field(:parents, 'string', indexed: true, stored: true, multi_valued: true)
-      #schema_generator.add_field(:ontologyType, 'ontologyType', indexed: true, stored: true, multi_valued: false)
-      schema_generator.add_field(:ontologyId, 'string', indexed: true, stored: true, multi_valued: false)
       schema_generator.add_field(:submissionId, 'pint', indexed: true, stored: true, multi_valued: false)
-      schema_generator.add_field(:childCount, 'pint', indexed: true, stored: true, multi_valued: false)
-
       schema_generator.add_field(:cui, 'text_general', indexed: true, stored: true, multi_valued: true)
       schema_generator.add_field(:semanticType, 'text_general', indexed: true, stored: true, multi_valued: true)
 
-      schema_generator.add_field(:property, 'text_general', indexed: true, stored: true, multi_valued: true)
-      schema_generator.add_field(:propertyRaw, 'text_general', indexed: false, stored: true, multi_valued: false)
-
-      schema_generator.add_field(:obsolete, 'boolean', indexed: true, stored: true, multi_valued: false)
-      schema_generator.add_field(:provisional, 'boolean', indexed: true, stored: true, multi_valued: false)
-
       # Copy fields for term search
       schema_generator.add_copy_field('prefLabel', '_text_')
+      # for exact search
       schema_generator.add_copy_field('prefLabel', 'prefLabel_Exact')
+
+      # Matches whole terms in the suggest text
       schema_generator.add_copy_field('prefLabel', 'prefLabel_Suggest')
+
+      # Will match from the left of the field, e.g. if the document field
+      # is "A brown fox" and the query is "A bro", it will match, but not "brown"
       schema_generator.add_copy_field('prefLabel', 'prefLabel_SuggestEdge')
+
+      # Matches any word in the input field, with implicit right truncation.
+      # This means that the field "A brown fox" will be matched by query "bro".
+      # We use this to get partial matches, but these would be boosted lower than exact and left-anchored
       schema_generator.add_copy_field('prefLabel', 'prefLabel_SuggestNgram')
 
       schema_generator.add_copy_field('synonym', '_text_')
@@ -48,11 +45,6 @@ module TestSearch
       schema_generator.add_copy_field('synonym', 'synonym_Suggest')
       schema_generator.add_copy_field('synonym', 'synonym_SuggestEdge')
       schema_generator.add_copy_field('synonym', 'synonym_SuggestNgram')
-
-      schema_generator.add_copy_field('notation', '_text_')
-
-      schema_generator.add_copy_field('prefLabel_*', 'prefLabel')
-      schema_generator.add_copy_field('synonym_*', 'synonym')
     end
 
     def index_id()
@@ -96,6 +88,9 @@ module TestSearch
 
   class TestModelSearch < MiniTest::Unit::TestCase
 
+    def self.before_suite
+      Goo.init_search_connections
+    end
     def setup
       @terms = [
         TermSearch.new(
@@ -132,7 +127,21 @@ module TestSearch
           submissionId: 2,
           semanticType: "Neoplastic Process",
           cui: "C0375111"
-        )
+        ),
+        TermSearch.new(
+          id: RDF::URI.new("http://ncicb.nci.nih.gov/xml/owl/EVS/Thesaurus.owl#Melanoma2"),
+          prefLabel: "Melanoma with cutaneous melanoma syndrome",
+          synonym: [
+            "Cutaneous Melanoma",
+            "Skin Cancer",
+            "Malignant Melanoma"
+          ],
+          definition: "Melanoma refers to a malignant skin cancer",
+          submissionAcronym: "NCIT",
+          submissionId: 2,
+          semanticType: "Neoplastic Process",
+          cui: "C0025202"
+        ),
       ]
     end
 
@@ -147,6 +156,98 @@ module TestSearch
       resp = TermSearch.search(@terms[1].prefLabel)
       assert_equal(1, resp["response"]["docs"].length)
       assert_equal @terms[1].prefLabel, resp["response"]["docs"][0]["prefLabel"]
+    end
+
+    def test_search_filters
+      TermSearch.indexClear
+      @terms[0].index
+      @terms[1].index
+      @terms[2].index
+      TermSearch.indexCommit
+      params = {"defType"=>"edismax",
+                 "stopwords"=>"true",
+                 "lowercaseOperators"=>"true",
+                 "qf"=>"prefLabel_Exact^100 prefLabel_SuggestEdge^50 synonym_SuggestEdge^10 prefLabel_SuggestNgram synonym_SuggestNgram resource_id  cui semanticType",
+                 "pf"=>"prefLabelSuggest^50",
+                 }
+      resp = TermSearch.search("Melanoma wi", params)
+      assert_equal(3, resp["response"]["numFound"])
+      assert_equal @terms[2].prefLabel, resp["response"]["docs"][0]["prefLabel"]
+    end
+
+    def test_search_exact_filter
+      TermSearch.indexClear
+      @terms[0].index
+      @terms[1].index
+      @terms[2].index
+      TermSearch.indexCommit
+      params = {"defType"=>"edismax",
+                "stopwords"=>"true",
+                "lowercaseOperators"=>"true",
+                "qf"=>"prefLabel_Exact",
+      }
+      resp = TermSearch.search("Melanoma", params)
+      assert_equal(1, resp["response"]["numFound"])
+      assert_equal @terms[0].prefLabel, resp["response"]["docs"][0]["prefLabel"]
+    end
+
+    def test_search_suggest_edge_filter
+      TermSearch.indexClear
+      @terms[0].index
+      @terms[1].index
+      @terms[2].index
+      TermSearch.indexCommit
+      params = {"defType"=>"edismax",
+                "stopwords"=>"true",
+                "lowercaseOperators"=>"true",
+                "qf"=>"prefLabel_SuggestEdge",
+      }
+      resp = TermSearch.search("Melanoma with", params)
+      assert_equal(1, resp["response"]["numFound"])
+      assert_equal @terms[2].prefLabel, resp["response"]["docs"][0]["prefLabel"]
+
+      resp = TermSearch.search("Melanoma", params)
+      assert_equal(2, resp["response"]["numFound"])
+      assert_equal @terms[0].prefLabel, resp["response"]["docs"][0]["prefLabel"]
+    end
+
+    def test_search_suggest_ngram_filter
+      TermSearch.indexClear
+      @terms[0].index
+      @terms[1].index
+      @terms[2].index
+      TermSearch.indexCommit
+
+      params = {"defType"=>"edismax",
+                "stopwords"=>"true",
+                "lowercaseOperators"=>"true",
+                "qf"=>"prefLabel_SuggestNgram",
+      }
+      resp = TermSearch.search("cutaneous", params)
+      assert_equal(1, resp["response"]["numFound"])
+      assert_equal @terms[2].prefLabel, resp["response"]["docs"][0]["prefLabel"]
+
+      resp = TermSearch.search("eous", params)
+      assert_equal(0, resp["response"]["numFound"])
+    end
+
+    def test_search_suggest_filter
+      TermSearch.indexClear
+      @terms[0].index
+      @terms[1].index
+      @terms[2].index
+      TermSearch.indexCommit
+      params = {"defType"=>"edismax",
+                "stopwords"=>"true",
+                "lowercaseOperators"=>"true",
+                "qf"=>"prefLabel_Suggest",
+      }
+      resp = TermSearch.search("cutaneous test with Neoplasm Melanoma", params)
+      assert_equal(3, resp["response"]["numFound"])
+
+
+      resp = TermSearch.search("mel", params)
+      assert_equal(0, resp["response"]["numFound"])
     end
 
     def test_unindex
