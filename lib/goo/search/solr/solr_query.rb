@@ -27,6 +27,8 @@ module SOLR
     end
 
     def delete_by_id(document_id, commit: true)
+      return  if document_id.nil?
+
       @solr.delete_by_id(document_id)
       @solr.commit if commit
     end

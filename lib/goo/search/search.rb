@@ -12,6 +12,9 @@ module Goo
     def index(connection_name = nil, to_set = nil)
       raise ArgumentError, "ID must be set to be able to index" if @id.nil?
       document = indexable_object(to_set)
+
+      return if document.blank? || document[:id].blank?
+
       connection_name ||= self.class.search_collection_name
       unindex(connection_name)
       self.class.search_client(connection_name).index_document(document)
