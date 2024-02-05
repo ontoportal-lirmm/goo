@@ -40,6 +40,7 @@ module Goo
   @@model_by_name = {}
   @@search_backends = {}
   @@search_connection = {}
+  @@search_collections = {}
   @@default_namespace = nil
   @@id_prefix = nil
   @@redis_client = nil
@@ -252,6 +253,8 @@ module Goo
     yield self
     configure_sanity_check
 
+    init_search_connections
+
     @@namespaces.freeze
     @@sparql_backends.freeze
     @@search_backends.freeze
@@ -279,21 +282,30 @@ module Goo
   end
 
   def self.search_client(collection_name)
-    return @@search_connection[collection_name]
+    @@search_connection[collection_name]
   end
 
   def self.add_search_connection(collection_name, search_backend = :main, &block)
-    unless @@search_connection[collection_name]
-      @@search_connection[collection_name] = SOLR::SolrConnector.new(search_conf(search_backend), collection_name)
+    @@search_collections[collection_name] = {
+      search_backend: search_backend,
+      block: block_given? ? block : nil
+    }
+  end
 
-      if block_given?
-        block.call
+  def self.init_search_connections
+    @@search_collections.each do |collection_name, backend|
+      search_backend = backend[:search_backend]
+      block =  backend[:block]
+      next if @@search_connection[collection_name]
+
+      @@search_connection[collection_name] = SOLR::SolrConnector.new(search_conf(search_backend), collection_name)
+      if block
+        block.call(@@search_connection[collection_name].schema_generator)
         @@search_connection[collection_name].enable_custom_schema
       end
 
       @@search_connection[collection_name].init
     end
-    @@search_connection[collection_name]
   end
 
   def self.sparql_query_client(name=:main)

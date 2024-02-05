@@ -62,9 +62,7 @@ module Goo
 
         if block_given?
           # optional block to generate custom schema
-          Goo.add_search_connection(collection_name, search_backend) do
-            class_eval(&block)
-          end
+          Goo.add_search_connection(collection_name, search_backend, &block)
         else
           Goo.add_search_connection(collection_name, search_backend)
         end
