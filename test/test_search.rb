@@ -292,7 +292,7 @@ module TestSearch
       TermSearch.indexBatch(@terms)
       TermSearch.indexCommit()
       resp = TermSearch.search("*:*")
-      assert_equal 2, resp["response"]["docs"].length
+      assert_equal @terms.size, resp["response"]["docs"].length
     end
 
     def test_unindexBatch
@@ -300,7 +300,7 @@ module TestSearch
       TermSearch.indexBatch(@terms)
       TermSearch.indexCommit()
       resp = TermSearch.search("*:*")
-      assert_equal 2, resp["response"]["docs"].length
+      assert_equal @terms.size, resp["response"]["docs"].length
 
       TermSearch.unindexBatch(@terms)
       TermSearch.indexCommit()
