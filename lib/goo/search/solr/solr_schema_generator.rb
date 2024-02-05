@@ -61,11 +61,10 @@ module SOLR
           "omitNorms": true,
           "queryAnalyzer":
             {
-              "type": "query",
               "tokenizer": {
                 "class": "solr.KeywordTokenizerFactory"
               },
-              "filter": [
+              "filters": [
                 {
                   "class": "solr.LowerCaseFilterFactory"
                 }
@@ -75,94 +74,38 @@ module SOLR
         {
           "name": "text_suggest_ngram",
           "class": "solr.TextField",
-          indexAnalyzer: {
-            "charFilter": [
-              {
-                "class": "solr.MappingCharFilterFactory",
-                "mapping": "mapping-ISOLatin1Accent.txt"
-              }
-            ],
+          "positionIncrementGap": "100",
+          "analyzer": {
             "tokenizer": {
               "class": "solr.StandardTokenizerFactory"
             },
-            "filter": [
-              {
-                "class": "solr.WordDelimiterGraphFilterFactory",
-                "generateWordParts": true,
-                "generateNumberParts": true,
-                "catenateWords": false,
-                "catenateNumbers": false,
-                "catenateAll": false,
-                "splitOnCaseChange": true
-              },
+            "filters": [
               {
                 "class": "solr.LowerCaseFilterFactory"
               },
               {
-                "class": "solr.EdgeNGramFilterFactory",
-                "maxGramSize": 20,
-                "minGramSize": 1
-              },
-              {
-                "class": "solr.PatternReplaceFilterFactory",
-                "pattern": "([^\w\d*æøåÆØÅ ])",
-                "replacement": "",
-                "replace": "all"
-              }
-            ]
-          },
-          queryAnalyzer: {
-
-            "charFilter": [
-              {
-                "class": "solr.MappingCharFilterFactory",
-                "mapping": "mapping-ISOLatin1Accent.txt"
-              }
-            ],
-            "tokenizer": {
-              "class": "solr.StandardTokenizerFactory"
-            },
-            "filter": [
-              {
-                "class": "solr.WordDelimiterGraphFilterFactory",
-                "generateWordParts": false,
-                "generateNumberParts": false,
-                "catenateWords": false,
-                "catenateNumbers": false,
-                "catenateAll": false,
-                "splitOnCaseChange": false
-              },
-              {
-                "class": "solr.LowerCaseFilterFactory"
-              },
-              {
-                "class": "solr.PatternReplaceFilterFactory",
-                "pattern": "([^\w\d*æøåÆØÅ ])",
-                "replacement": "",
-                "replace": "all"
-              },
-              {
-                "class": "solr.PatternReplaceFilterFactory",
-                "pattern": "^(.{20})(.*)?",
-                "replacement": "$1",
-                "replace": "all"
+                "class": "solr.EdgeNGramTokenizerFactory",
+                "minGramSize": 1,
+                "maxGramSize": 25
               }
             ]
           }
         },
-        { "name": "text_suggest_edge",
+        {
+          "name": "text_suggest_edge",
           "class": "solr.TextField",
-          indexAnalyzer: {
-            "charFilter": [
-              {
-                "class": "solr.MappingCharFilterFactory",
-                "mapping": "mapping-ISOLatin1Accent.txt"
-              }
-            ],
+          "positionIncrementGap": "100",
+          "indexAnalyzer": {
             "tokenizer": {
               "class": "solr.KeywordTokenizerFactory"
             },
-            "filter": [
+            "char_filters": [
+              {
+                "class": "solr.MappingCharFilterFactory",
+                "mapping": "solr/resources/org/apache/lucene/analysis/miscellaneous/MappingCharFilter.greekaccent"
+              }
+            ],
+            "filters": [
               {
                 "class": "solr.LowerCaseFilterFactory"
               },
@@ -174,28 +117,28 @@ module SOLR
               },
               {
                 "class": "solr.EdgeNGramFilterFactory",
-                "maxGramSize": 30,
-                "minGramSize": 1
+                "minGramSize": 1,
+                "maxGramSize": 30
               },
               {
                 "class": "solr.PatternReplaceFilterFactory",
-                "pattern": "([^\w\d*æøåÆØÅ ])",
+                "pattern": "([^\\w\\d\\*æøåÆØÅ ])",
                 "replacement": "",
                 "replace": "all"
               }
             ]
           },
-          queryAnalyzer: {
-            "charFilter": [
-              {
-                "class": "solr.MappingCharFilterFactory",
-                "mapping": "mapping-ISOLatin1Accent.txt"
-              }
-            ],
+          "queryAnalyzer": {
             "tokenizer": {
               "class": "solr.KeywordTokenizerFactory"
             },
-            "filter": [
+            "char_filters": [
+              {
+                "class": "solr.MappingCharFilterFactory",
+                "mapping": "solr/resources/org/apache/lucene/analysis/miscellaneous/MappingCharFilter.greekaccent"
+              }
+            ],
+            "filters": [
               {
                 "class": "solr.LowerCaseFilterFactory"
               },
@@ -207,7 +150,7 @@ module SOLR
               },
               {
                 "class": "solr.PatternReplaceFilterFactory",
-                "pattern": "([^\w\d*æøåÆØÅ ])",
+                "pattern": "([^\\w\\d\\*æøåÆØÅ ])",
                 "replacement": "",
                 "replace": "all"
               },
@@ -225,26 +168,26 @@ module SOLR
           "class": "solr.TextField",
           "positionIncrementGap": 100,
           indexAnalyzer: {
-            "charFilter": [
+            "char_filters": [
               {
                 "class": "solr.MappingCharFilterFactory",
-                "mapping": "mapping-ISOLatin1Accent.txt"
+                "mapping": "solr/resources/org/apache/lucene/analysis/miscellaneous/MappingCharFilter.greekaccent"
               }
             ],
             "tokenizer": {
               "class": "solr.StandardTokenizerFactory"
             },
-            "filter": [
+            "filters": [
               {
                 "class": "solr.WordDelimiterGraphFilterFactory",
-                "generateWordParts": true,
-                "generateNumberParts": true,
-                "catenateWords": true,
-                "catenateNumbers": true,
-                "catenateAll": true,
-                "splitOnCaseChange": true,
-                "splitOnNumerics": true,
-                "preserveOriginal": true
+                "generateWordParts": "1",
+                "generateNumberParts": "1",
+                "catenateWords": "1",
+                "catenateNumbers": "1",
+                "catenateAll": "1",
+                "splitOnCaseChange": "1",
+                "splitOnNumerics": "1",
+                "preserveOriginal": "1"
               },
               {
                 "class": "solr.LowerCaseFilterFactory"
@@ -258,25 +201,25 @@ module SOLR
             ]
           },
           queryAnalyzer: {
-            "charFilter": [
+            "char_filters": [
               {
                 "class": "solr.MappingCharFilterFactory",
-                "mapping": "mapping-ISOLatin1Accent.txt"
+                "mapping": "solr/resources/org/apache/lucene/analysis/miscellaneous/MappingCharFilter.greekaccent"
               }
             ],
             "tokenizer": {
               "class": "solr.StandardTokenizerFactory"
             },
-            "filter": [
+            "filters": [
               {
                 "class": "solr.WordDelimiterGraphFilterFactory",
-                "generateWordParts": false,
-                "generateNumberParts": false,
-                "catenateWords": false,
-                "catenateNumbers": false,
-                "catenateAll": false,
-                "splitOnCaseChange": false,
-                "splitOnNumerics": false
+                "generateWordParts": "0",
+                "generateNumberParts": "0",
+                "catenateWords": "0",
+                "catenateNumbers": "0",
+                "catenateAll": "0",
+                "splitOnCaseChange": "0",
+                "splitOnNumerics": "0"
               },
               {
                 "class": "solr.LowerCaseFilterFactory"
