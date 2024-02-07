@@ -50,15 +50,25 @@ module Goo
 
         def set_value(model, predicate, value, &block)
           language = object_language(value)
-
-          if requested_lang.eql?(:ALL) || !literal?(value) || language_match?(language)
-            block.call
+          
+          if requested_lang.eql?(:ALL) || !literal?(value) || (language_match?(language) && can_add_new_value(model,predicate, language))
+              block.call
           end
 
           if requested_lang.eql?(:ALL) || requested_lang.is_a?(Array)
-            language = "@none" if language.nil? || language.eql?(:no_lang)
+            language = "@none" if no_lang?(language)
             store_objects_by_lang(model.id, predicate, value, language)
           end
+        end
+
+
+        def  can_add_new_value(model, predicate, new_language)
+          old_val = model.send(predicate) rescue nil
+          list_attributes?(predicate) || old_val.blank? || !no_lang?(new_language)
+        end
+
+        def no_lang?(language)
+          language.nil? || language.eql?(:no_lang)
         end
         
         def model_group_by_lang(model)
