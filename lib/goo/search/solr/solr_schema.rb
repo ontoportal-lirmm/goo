@@ -11,7 +11,7 @@ module SOLR
       if response.code.to_i == 200
         @schema = JSON.parse(response.body)["schema"]
       else
-        raise StandardError, "Failed to upload schema. HTTP #{response.code}: #{response.message}"
+        raise StandardError, "Failed to upload schema. HTTP #{response.code}: #{response.body}"
       end
     end
 
@@ -105,12 +105,11 @@ module SOLR
 
     def clear_all_schema(generator = schema_generator)
       init_df = generator.dynamic_fields_to_add.map { |f| f[:name] }
-      init_cf = generator.copy_fields_to_add.map { |f| f[:source] }
       init_ft = generator.field_types_to_add.map { |f| f[:name] }
-      init_f = generator.fields_to_add.map { |f| f[:name] }
+
 
       dynamic_fields = all_dynamic_fields.select { |f| init_df.include?(f['name']) }.map { |f| { name: f['name'] } }
-      copy_fields = all_copy_fields.select { |f| init_cf.include?(f['source']) || init_f.include?(f['source']) }.map { |f| { source: f['source'], dest: f['dest'] } }
+      copy_fields = all_copy_fields.map { |f| { source: f['source'], dest: f['dest'] } }
       fields_types = all_fields_types.select { |f| init_ft.include?(f['name']) }.map { |f| { name: f['name'] } }
       fields = all_fields.reject { |f| %w[id _version_ ].include?(f['name']) }.map { |f| { name: f['name'] } }
 
@@ -190,7 +189,7 @@ module SOLR
       if response.code.to_i == 200
         response
       else
-        raise StandardError, "Failed to upload schema. HTTP #{response.code}: #{response.message}"
+        raise StandardError, "Failed to upload schema. HTTP #{response.code}: #{response.body}"
       end
     end
 
