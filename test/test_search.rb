@@ -26,25 +26,25 @@ module TestSearch
       # Copy fields for term search
       schema_generator.add_copy_field('prefLabel', '_text_')
       # for exact search
-      schema_generator.add_copy_field('prefLabel', 'prefLabel_Exact')
+      schema_generator.add_copy_field('prefLabel', 'prefLabelExact')
 
       # Matches whole terms in the suggest text
-      schema_generator.add_copy_field('prefLabel', 'prefLabel_Suggest')
+      schema_generator.add_copy_field('prefLabel', 'prefLabelSuggest')
 
       # Will match from the left of the field, e.g. if the document field
       # is "A brown fox" and the query is "A bro", it will match, but not "brown"
-      schema_generator.add_copy_field('prefLabel', 'prefLabel_SuggestEdge')
+      schema_generator.add_copy_field('prefLabel', 'prefLabelSuggestEdge')
 
       # Matches any word in the input field, with implicit right truncation.
       # This means that the field "A brown fox" will be matched by query "bro".
       # We use this to get partial matches, but these would be boosted lower than exact and left-anchored
-      schema_generator.add_copy_field('prefLabel', 'prefLabel_SuggestNgram')
+      schema_generator.add_copy_field('prefLabel', 'prefLabelSuggestNgram')
 
       schema_generator.add_copy_field('synonym', '_text_')
-      schema_generator.add_copy_field('synonym', 'synonym_Exact')
-      schema_generator.add_copy_field('synonym', 'synonym_Suggest')
-      schema_generator.add_copy_field('synonym', 'synonym_SuggestEdge')
-      schema_generator.add_copy_field('synonym', 'synonym_SuggestNgram')
+      schema_generator.add_copy_field('synonym', 'synonymExact')
+      schema_generator.add_copy_field('synonym', 'synonymSuggest')
+      schema_generator.add_copy_field('synonym', 'synonymSuggestEdge')
+      schema_generator.add_copy_field('synonym', 'synonymSuggestNgram')
     end
 
     def index_id()
@@ -167,7 +167,7 @@ module TestSearch
       params = {"defType"=>"edismax",
                  "stopwords"=>"true",
                  "lowercaseOperators"=>"true",
-                 "qf"=>"prefLabel_Exact^100 prefLabel_SuggestEdge^50 synonym_SuggestEdge^10 prefLabel_SuggestNgram synonym_SuggestNgram resource_id  cui semanticType",
+                 "qf"=>"prefLabelExact^100 prefLabelSuggestEdge^50 synonymSuggestEdge^10 prefLabelSuggestNgram synonymSuggestNgram resource_id  cui semanticType",
                  "pf"=>"prefLabelSuggest^50",
                  }
       resp = TermSearch.search("Melanoma wi", params)
@@ -184,7 +184,7 @@ module TestSearch
       params = {"defType"=>"edismax",
                 "stopwords"=>"true",
                 "lowercaseOperators"=>"true",
-                "qf"=>"prefLabel_Exact",
+                "qf"=>"prefLabelExact",
       }
       resp = TermSearch.search("Melanoma", params)
       assert_equal(1, resp["response"]["numFound"])
@@ -200,7 +200,7 @@ module TestSearch
       params = {"defType"=>"edismax",
                 "stopwords"=>"true",
                 "lowercaseOperators"=>"true",
-                "qf"=>"prefLabel_SuggestEdge",
+                "qf"=>"prefLabelSuggestEdge",
       }
       resp = TermSearch.search("Melanoma with", params)
       assert_equal(1, resp["response"]["numFound"])
@@ -221,7 +221,7 @@ module TestSearch
       params = {"defType"=>"edismax",
                 "stopwords"=>"true",
                 "lowercaseOperators"=>"true",
-                "qf"=>"prefLabel_SuggestNgram",
+                "qf"=>"prefLabelSuggestNgram",
       }
       resp = TermSearch.search("cutaneous", params)
       assert_equal(1, resp["response"]["numFound"])
@@ -240,7 +240,7 @@ module TestSearch
       params = {"defType"=>"edismax",
                 "stopwords"=>"true",
                 "lowercaseOperators"=>"true",
-                "qf"=>"prefLabel_Suggest",
+                "qf"=>"prefLabelSuggest",
       }
       resp = TermSearch.search("cutaneous test with Neoplasm Melanoma", params)
       assert_equal(3, resp["response"]["numFound"])

@@ -247,10 +247,10 @@ module SOLR
 
     def init_dynamic_fields
       [
-        { "name": "*_Exact", "type": "string_ci", "multiValued": true, stored: false },
-        { "name": "*_Suggest", "type": "text_suggest", "omitNorms": true, stored: false, "multiValued": true },
-        { "name": "*_SuggestEdge", "type": "text_suggest_edge", stored: false, "multiValued": true },
-        { "name": "*_SuggestNgram", "type": "text_suggest_ngram", stored: false, "omitNorms": true, "multiValued": true },
+        { "name": "*Exact", "type": "string_ci", "multiValued": true, stored: false },
+        { "name": "*Suggest", "type": "text_suggest", "omitNorms": true, stored: false, "multiValued": true },
+        { "name": "*SuggestEdge", "type": "text_suggest_edge", stored: false, "multiValued": true },
+        { "name": "*SuggestNgram", "type": "text_suggest_ngram", stored: false, "omitNorms": true, "multiValued": true },
         { "name": "*_text", "type": "text_general", stored: true, "multiValued": false },
         { "name": "*_texts", "type": "text_general", stored: true, "multiValued": true }
       ]
@@ -258,8 +258,8 @@ module SOLR
 
     def init_copy_fields
       [
-        { source: "*_text", dest: %w[_text_ *_Exact *_Suggest *_SuggestEdge *_SuggestNgram] },
-        { source: "*_texts", dest: %w[_text_ *_Exact *_Suggest *_SuggestEdge *_SuggestNgram] }
+        { source: "*_text", dest: %w[_text_ *Exact *Suggest *SuggestEdge *SuggestNgram] },
+        { source: "*_texts", dest: %w[_text_ *Exact *Suggest *SuggestEdge *SuggestNgram] }
       ]
     end
   end
