@@ -3,7 +3,7 @@ require_relative 'test_case'
 module TestSearch
 
   class TermSearch < Goo::Base::Resource
-    model :term_search, name_with: :id
+    model :term_search, name_with: lambda { |resource| uuid_uri_generator(resource) }
     attribute :prefLabel, enforce: [:existence]
     attribute :synonym, enforce: [:list] # array of strings
     attribute :definition  # array of strings
@@ -82,6 +82,10 @@ module TestSearch
     # Dummy attributes to validate non-searchable files
     attribute :semanticType
     attribute :cui
+
+    attribute :object, enforce: [:term_search]
+    attribute :object_list, enforce: [:term_search, :list]
+
 
     enable_indexing(:test_solr)
   end
@@ -332,7 +336,10 @@ module TestSearch
                               definition: "definition of test2",
                               synonym: ["synonym1", "synonym2"],
                               submissionAcronym: "test",
-                              private: true
+                              private: true,
+                              object: TermSearch.new(prefLabel: "test", submissionAcronym: 'acronym', submissionId: 1 ).save,
+                              object_list: [TermSearch.new(prefLabel: "test2",submissionAcronym: 'acronym2', submissionId: 2).save,
+                                            TermSearch.new(prefLabel: "test3", submissionAcronym: 'acronym3', submissionId: 3).save]
       )
 
       term.save

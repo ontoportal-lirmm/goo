@@ -37,11 +37,39 @@ module Goo
       raise NoMethodError, "You must define method index_doc in your class for it to be indexable"
     end
 
+    def embedded_doc
+      raise NoMethodError, "You must define method embedded_doc in your class for it to be indexable"
+    end
+
     def indexable_object(to_set = nil)
       begin
         document = index_doc(to_set)
       rescue
-        document = self.to_hash.reject { |k, _| !self.class.indexable?(k) }
+          document = self.to_hash.reject { |k, _| !self.class.indexable?(k) }
+          document.transform_values! do |v|
+            is_array = v.is_a?(Array)
+            v = Array(v).map do |x|
+              if x.is_a?(Goo::Base::Resource)
+                x.embedded_doc rescue x.id.to_s
+              else
+                if x.is_a?(RDF::URI)
+                  x.to_s
+                else
+                  x.respond_to?(:object) ? x.object  : x
+                end
+              end
+            end
+            is_array ? v : v.first
+          end
+
+          document = document.reduce({}) do |h, (k, v)|
+            if v.is_a?(Hash)
+              v.each { |k2, v2| h["#{k}_#{k2}".to_sym] = v2 }
+            else
+              h[k] = v
+            end
+            h
+          end
       end
 
       model_name = self.class.model_name.to_s.downcase
@@ -91,7 +119,7 @@ module Goo
       end
 
       def index_document_attr(key)
-        return key.to_s if custom_schema?
+        return key.to_s if custom_schema? || self.attribute_settings(key).nil?
 
         type = self.datatype(key)
         is_list = self.list?(key)

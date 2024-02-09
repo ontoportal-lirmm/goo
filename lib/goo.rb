@@ -291,6 +291,9 @@ module Goo
       block: block_given? ? block : nil
     }
   end
+  def self.search_connections
+    @@search_connection
+  end
 
   def self.init_search_connections(force=false)
     @@search_collections.each do |collection_name, backend|
