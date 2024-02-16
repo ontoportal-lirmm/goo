@@ -21,6 +21,29 @@ module Goo
     end
 
 
+    def index_update(attributes_to_update, connection_name = nil, to_set = nil)
+      raise ArgumentError, "ID must be set to be able to index" if @id.nil?
+      raise ArgumentError, "Field names to be updated in index must be provided" if attributes_to_update.blank?
+
+      old_doc = self.class.search("id:\"#{index_id}\"").dig("response","docs")&.first
+
+      raise ArgumentError, "ID must be set to be able to index" if old_doc.blank?
+
+      doc = indexable_object(to_set)
+
+      doc.each do |key, val|
+        next unless attributes_to_update.any?{ |attr| key.to_s.eql?(attr.to_s) || key.to_s.include?("#{attr}_")}
+        old_doc[key] = val
+      end
+
+      connection_name ||= self.class.search_collection_name
+      unindex(connection_name)
+
+      old_doc.reject!{|k,v| k.to_s.end_with?('_sort') || k.to_s.end_with?('_sorts')}
+      old_doc.delete("_version_")
+      self.class.search_client(connection_name).index_document(old_doc)
+    end
+
     def unindex(connection_name = nil)
       connection_name ||= self.class.search_collection_name
       self.class.search_client(connection_name).delete_by_id(index_id)
