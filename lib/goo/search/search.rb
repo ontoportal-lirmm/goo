@@ -111,6 +111,10 @@ module Goo
 
     module ClassMethods
 
+      def index_enabled?
+        !@model_settings[:search_collection].nil?
+      end
+
       def enable_indexing(collection_name, search_backend = :main, &block)
         @model_settings[:search_collection] = collection_name
 
