@@ -118,7 +118,8 @@ module SOLR
               {
                 "class": "solr.EdgeNGramFilterFactory",
                 "minGramSize": 1,
-                "maxGramSize": 30
+                "maxGramSize": 30,
+                "preserveOriginal": true
               },
               {
                 "class": "solr.PatternReplaceFilterFactory",
@@ -247,19 +248,31 @@ module SOLR
 
     def init_dynamic_fields
       [
+        {"name": "*_t", "type": "text_general", stored: true, "multiValued": false },
+        {"name": "*_txt", "type": "text_general", stored: true, "multiValued": true},
+        {"name": "*_i", "type": "pint", stored: true },
+        {"name": "*_is", "type": "pints", stored: true },
+        {"name": "*_f", "type": "pfloat", stored: true },
+        {"name": "*_fs", "type": "pfloats", stored: true },
+        {"name": "*_b", "type": "boolean", stored: true },
+        {"name": "*_bs", "type": "booleans", stored: true },
+        {"name": "*_dt", "type": "pdate", stored: true },
+        {"name": "*_dts", "type": "pdate", stored: true , multiValued: true},
         { "name": "*Exact", "type": "string_ci", "multiValued": true, stored: false },
         { "name": "*Suggest", "type": "text_suggest", "omitNorms": true, stored: false, "multiValued": true },
         { "name": "*SuggestEdge", "type": "text_suggest_edge", stored: false, "multiValued": true },
         { "name": "*SuggestNgram", "type": "text_suggest_ngram", stored: false, "omitNorms": true, "multiValued": true },
         { "name": "*_text", "type": "text_general", stored: true, "multiValued": false },
-        { "name": "*_texts", "type": "text_general", stored: true, "multiValued": true }
+        { "name": "*_texts", "type": "text_general", stored: true, "multiValued": true },
+        {"name": "*_sort", "type": "string", stored: false },
+        {"name": "*_sorts", "type": "strings", stored: false , "multiValued": true},
       ]
     end
 
     def init_copy_fields
       [
-        { source: "*_text", dest: %w[_text_ *Exact *Suggest *SuggestEdge *SuggestNgram] },
-        { source: "*_texts", dest: %w[_text_ *Exact *Suggest *SuggestEdge *SuggestNgram] }
+        { source: "*_text", dest: %w[_text_ *Exact *Suggest *SuggestEdge *SuggestNgram *_sort] },
+        { source: "*_texts", dest: %w[_text_ *Exact *Suggest *SuggestEdge *SuggestNgram *_sorts] },
       ]
     end
   end
