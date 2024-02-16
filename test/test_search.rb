@@ -89,7 +89,7 @@ module TestSearch
   class TestModelSearch < MiniTest::Unit::TestCase
 
     def self.before_suite
-      Goo.init_search_connections
+      Goo.init_search_connections(true)
     end
     def setup
       @terms = [

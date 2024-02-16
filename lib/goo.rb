@@ -253,7 +253,7 @@ module Goo
     yield self
     configure_sanity_check
 
-    init_search_connections
+      init_search_connections
 
     @@namespaces.freeze
     @@sparql_backends.freeze
@@ -292,7 +292,7 @@ module Goo
     }
   end
 
-  def self.init_search_connections
+  def self.init_search_connections(force=false)
     @@search_collections.each do |collection_name, backend|
       search_backend = backend[:search_backend]
       block =  backend[:block]
@@ -303,8 +303,7 @@ module Goo
         block.call(@@search_connection[collection_name].schema_generator)
         @@search_connection[collection_name].enable_custom_schema
       end
-
-      @@search_connection[collection_name].init
+      @@search_connection[collection_name].init(force)
     end
   end
 

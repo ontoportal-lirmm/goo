@@ -55,17 +55,6 @@ module SOLR
       @schema_generator ||= SolrSchemaGenerator.new
     end
 
-    def init(&external_schema)
-
-      init_collection
-
-      if block_given?
-        class_eval(&external_schema)
-      end
-
-      init_schema
-    end
-
     def init_collection(num_shards = 1, replication_factor = 1)
       create_collection_url = URI.parse("#{@solr_url}/admin/collections?action=CREATE&name=#{@collection_name}&numShards=#{num_shards}&replicationFactor=#{replication_factor}")
 

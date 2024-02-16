@@ -14,17 +14,15 @@ module SOLR
       @solr_url = solr_url
       @collection_name = collection_name
       @solr = RSolr.connect(url: collection_url)
-      @initialized = false
       @custom_schema = false
     end
 
-    def init
-      return if @initialized
+    def init(force = false)
+      return if collection_exists?(@collection_name) && !force
+
       create_collection
 
       init_schema
-
-      @initialized = true
     end
 
   end
