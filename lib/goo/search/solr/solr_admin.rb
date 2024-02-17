@@ -5,6 +5,19 @@ module SOLR
       "#{@solr_url}/admin"
     end
 
+    def solr_alive?
+      collections_url = URI.parse("#{admin_url}/collections?action=CLUSTERSTATUS")
+      http = Net::HTTP.new(collections_url.host, collections_url.port)
+      request = Net::HTTP::Get.new(collections_url.request_uri)
+
+      begin
+        response = http.request(request)
+        return response.code.eql?("200") && JSON.parse(response.body).dig("responseHeader", "status").eql?(0)
+      rescue StandardError => e
+        return false
+      end
+    end
+
     def fetch_all_collections
       collections_url = URI.parse("#{admin_url}/collections?action=LIST")
 
