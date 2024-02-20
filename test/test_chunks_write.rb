@@ -139,7 +139,7 @@ module TestChunkWrite
           50.times do |j|
             oq = "SELECT (count(?s) as ?c) WHERE { ?s a ?o }"
             Goo.sparql_query_client.query(oq).each do |sol|
-              refute_equal 0, sol[:c]
+              refute_equal 0, sol[:c].to_i
             end
           end
         }

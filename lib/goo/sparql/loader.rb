@@ -95,10 +95,11 @@ module Goo
             predicates_map = {}
             uniq_p.each do |p|
               i = 0
-              key = ('var_' + p.last_part + i.to_s).to_sym
+              last_part = p.to_s.include?("#") ? p.to_s.split('#').last : p.to_s.split('/').last
+              key = ('var_' + last_part + i.to_s).to_sym
               while predicates_map.include?(key)
                 i += 1
-                key = ('var_' + p.last_part + i.to_s).to_sym
+                key = ('var_' + last_part + i.to_s).to_sym
                 break if i > 10
               end
               predicates_map[key] = { uri: p, is_inverse: false }

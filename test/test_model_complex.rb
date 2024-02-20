@@ -46,7 +46,7 @@ class Term < Goo::Base::Resource
     if collection.id.to_s["submission1"]
       return RDF::RDFS[:subClassOf]
     end
-    return RDF::SKOS[:broader]
+    return RDF::Vocab::SKOS[:broader]
   end
 
   def self.class_rdf_type(*args)
@@ -54,7 +54,7 @@ class Term < Goo::Base::Resource
     if collection.id.to_s["submission1"]
       return RDF::OWL[:Class]
     end
-    return RDF::SKOS[:Concept]
+    return RDF::Vocab::SKOS[:Concept]
   end
 
   attribute :methodBased, namespace: :rdfs, property: :subClassOf, handler: :dataMethod
