@@ -21,7 +21,7 @@ module RDF
 
     # Ensure respond_to? reflects the delegated methods
     def respond_to_missing?(method, include_private = false)
-      se.respond_to?(method) || super
+      self.to_s.respond_to?(method) || super
     end
 
   end
