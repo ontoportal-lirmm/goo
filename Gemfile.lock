@@ -12,7 +12,6 @@ PATH
   remote: .
   specs:
     goo (0.0.2)
-      addressable (~> 2.8)
       pry
       rdf (= 3.2.11)
       rdf-raptor
@@ -33,8 +32,6 @@ GEM
       multi_json (~> 1.3)
       thread_safe (~> 0.1)
       tzinfo (~> 0.3.37)
-    addressable (2.8.6)
-      public_suffix (>= 2.0.2, < 6.0)
     base64 (0.2.0)
     builder (3.2.4)
     coderay (1.1.3)
@@ -74,7 +71,6 @@ GEM
     pry (0.14.2)
       coderay (~> 1.1)
       method_source (~> 1.0)
-    public_suffix (5.0.4)
     rack (2.2.8)
     rack-accept (0.4.5)
       rack (>= 0.4)
