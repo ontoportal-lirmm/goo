@@ -50,6 +50,10 @@ module RDF
 
 
   class Literal
+    class DateTime < Temporal
+      FORMAT = '%Y-%m-%dT%H:%M:%S'.freeze # the format that is supported by 4store
+    end
+
     @@subclasses_by_uri = {}
     def self.datatyped_class(uri)
       return nil if uri.nil?
