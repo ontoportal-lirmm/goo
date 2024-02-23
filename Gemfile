@@ -23,3 +23,4 @@ group :profiling do
 end
 
 gem 'sparql-client', github: 'ontoportal-lirmm/sparql-client', branch: 'master'
+gem 'faraday', '2.7.11' #unpin if we no more support ruby 2.7

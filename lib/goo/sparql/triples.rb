@@ -53,6 +53,8 @@ module Goo
         if model.previous_values
           graph_delete = RDF::Graph.new
           model.previous_values.each do |attr,value|
+            next unless  model.modified_attributes.any?{|x| attr.eql?(x)}
+
             predicate = model.class.attribute_uri(attr,model.collection)
             values = value.kind_of?(Array) ? value : [value]
             values.each do |v|

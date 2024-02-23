@@ -1,6 +1,8 @@
 require "pry"
 require "rdf"
+require "rdf/vocab"
 require "rdf/ntriples"
+require "rdf/rdfxml"
 require "sparql/client"
 
 require "set"
