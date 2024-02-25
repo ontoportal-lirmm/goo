@@ -299,7 +299,7 @@ module Goo
   end
 
   def self.init_search_connection(collection_name, search_backend = :main,  block = nil, force: false)
-    return if @@search_connection[collection_name] && !force
+    return @@search_connection[collection_name] if @@search_connection[collection_name] && !force
 
     @@search_connection[collection_name] = SOLR::SolrConnector.new(search_conf(search_backend), collection_name)
     if block

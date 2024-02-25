@@ -20,26 +20,25 @@ module Goo
       self.class.search_client(connection_name).index_document(document)
     end
 
-
     def index_update(attributes_to_update, connection_name = nil, to_set = nil)
       raise ArgumentError, "ID must be set to be able to index" if @id.nil?
       raise ArgumentError, "Field names to be updated in index must be provided" if attributes_to_update.blank?
 
-      old_doc = self.class.search("id:\"#{index_id}\"").dig("response","docs")&.first
+      old_doc = self.class.search("id:\"#{index_id}\"").dig("response", "docs")&.first
 
       raise ArgumentError, "ID must be set to be able to index" if old_doc.blank?
 
       doc = indexable_object(to_set)
 
       doc.each do |key, val|
-        next unless attributes_to_update.any?{ |attr| key.to_s.eql?(attr.to_s) || key.to_s.include?("#{attr}_")}
+        next unless attributes_to_update.any? { |attr| key.to_s.eql?(attr.to_s) || key.to_s.include?("#{attr}_") }
         old_doc[key] = val
       end
 
       connection_name ||= self.class.search_collection_name
       unindex(connection_name)
 
-      old_doc.reject!{|k,v| k.to_s.end_with?('_sort') || k.to_s.end_with?('_sorts')}
+      old_doc.reject! { |k, v| k.to_s.end_with?('_sort') || k.to_s.end_with?('_sorts') }
       old_doc.delete("_version_")
       self.class.search_client(connection_name).index_document(old_doc)
     end
@@ -67,32 +66,32 @@ module Goo
     def indexable_object(to_set = nil)
       begin
         document = index_doc(to_set)
-      rescue
-          document = self.to_hash.reject { |k, _| !self.class.indexable?(k) }
-          document.transform_values! do |v|
-            is_array = v.is_a?(Array)
-            v = Array(v).map do |x|
-              if x.is_a?(Goo::Base::Resource)
-                x.embedded_doc rescue x.id.to_s
+      rescue NoMethodError
+        document = self.to_hash.reject { |k, _| !self.class.indexable?(k) }
+        document.transform_values! do |v|
+          is_array = v.is_a?(Array)
+          v = Array(v).map do |x|
+            if x.is_a?(Goo::Base::Resource)
+              x.embedded_doc rescue x.id.to_s
+            else
+              if x.is_a?(RDF::URI)
+                x.to_s
               else
-                if x.is_a?(RDF::URI)
-                  x.to_s
-                else
-                  x.respond_to?(:object) ? x.object  : x
-                end
+                x.respond_to?(:object) ? x.object : x
               end
             end
-            is_array ? v : v.first
           end
+          is_array ? v : v.first
+        end
+      end
 
-          document = document.reduce({}) do |h, (k, v)|
-            if v.is_a?(Hash)
-              v.each { |k2, v2| h["#{k}_#{k2}".to_sym] = v2 }
-            else
-              h[k] = v
-            end
-            h
-          end
+      document = document.reduce({}) do |h, (k, v)|
+        if v.is_a?(Hash)
+          v.each { |k2, v2| h["#{k}_#{k2}".to_sym] = v2 }
+        else
+          h[k] = v
+        end
+        h
       end
 
       model_name = self.class.model_name.to_s.downcase
@@ -177,7 +176,7 @@ module Goo
       end
 
       def indexOptimize(attrs = nil, connection_name = search_collection_name)
-        search_client(connection_name).optimize(attrs)
+        search_client(connection_name).index_optimize(attrs)
       end
 
       # WARNING: this deletes ALL data from the index
