@@ -33,25 +33,24 @@ module RDF
   end
 
   class Literal
-    def to_base
-      text = []
-      text << %("#{escape(value)}")
-      text << "@#{language}" if has_language?
-      if has_datatype?
-        if datatype.respond_to?:to_base
-          text << "^^#{datatype.to_base}"
-        else
-          text << "^^<#{datatype.to_s}>"
-        end
-      end
-      text.join ""
-    end
-  end
-
-
-  class Literal
     class DateTime < Temporal
       FORMAT = '%Y-%m-%dT%H:%M:%S'.freeze # the format that is supported by 4store
     end
+
+    def initialize(value, language: nil, datatype: nil, lexical: nil, validate: false, canonicalize: false, **options)
+      @object   = value.freeze
+      @string   = lexical if lexical
+      @string   = value if !defined?(@string) && value.is_a?(String)
+      @string   = @string.encode(Encoding::UTF_8).freeze if instance_variable_defined?(:@string)
+      @object   = @string if instance_variable_defined?(:@string) && @object.is_a?(String)
+      @language = language.to_s.downcase.to_sym if language
+      @datatype = RDF::URI(datatype).freeze if datatype
+      @datatype ||= self.class.const_get(:DATATYPE) if self.class.const_defined?(:DATATYPE)
+      @datatype ||= instance_variable_defined?(:@language) && @language ? RDF.langString : RDF::URI("http://www.w3.org/2001/XMLSchema#string")
+      @original_datatype = datatype
+    end
+
+    attr_reader :original_datatype
   end
+
 end #end RDF
