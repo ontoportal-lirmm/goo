@@ -6,6 +6,7 @@ Gem::Specification.new do |s|
   s.email = "manuelso@stanford.edu"
   s.files = Dir["lib/**/*.rb"]
   s.homepage = "http://github.com/ncbo/goo"
+  s.add_dependency("addressable", "~> 2.8")
   s.add_dependency("pry")
   s.add_dependency("rdf", "3.2.11") #unpin when we support only Ruby >= 3.0
   s.add_dependency("rdf-vocab")

@@ -383,9 +383,12 @@ module Goo
               value = RDF::Literal.new(filter_operation.value)
               if filter_operation.value.is_a? String
                 value = RDF::Literal.new(filter_operation.value)
+                filter_var = "str(?#{filter_var})"
+              else
+                filter_var = "?#{filter_var}"
               end
               filter_operations << (
-                "?#{filter_var.to_s} #{sparql_op_string(filter_operation.operator)} " +
+                "#{filter_var.to_s} #{sparql_op_string(filter_operation.operator)} " +
                   " #{value.to_ntriples}")
             end
 
