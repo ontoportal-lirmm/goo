@@ -20,7 +20,7 @@ module Goo
     @settings.goo_path_query      ||= ENV['GOO_PATH_QUERY'] || '/sparql/'
     @settings.goo_path_data       ||= ENV['GOO_PATH_DATA'] || '/data/'
     @settings.goo_path_update     ||= ENV['GOO_PATH_UPDATE'] || '/update/'
-    @settings.search_server_url   ||= ENV['SEARCH_SERVER_URL'] || 'http://localhost:8983/solr/term_search_core1'
+    @settings.search_server_url   ||= ENV['SEARCH_SERVER_URL'] || 'http://localhost:8983/solr'
     @settings.redis_host          ||= ENV['REDIS_HOST'] || 'localhost'
     @settings.redis_port          ||= ENV['REDIS_PORT'] || 6379
     @settings.bioportal_namespace ||= ENV['BIOPORTAL_NAMESPACE'] || 'http://data.bioontology.org/'
