@@ -374,8 +374,8 @@ module TestSearch
       term2.delete
       term.delete
 
-      indexed_term = TermSearch2.search("id:#{term.id.to_s.gsub(":", "\\:")}")["response"]["docs"].first
-      indexed_term2 = TermSearch3.search("id:#{term2.id.to_s.gsub(":", "\\:")}")["response"]["docs"].first
+      indexed_term = TermSearch2.submit_search_query("id:#{term.id.to_s.gsub(":", "\\:")}")["response"]["docs"].first
+      indexed_term2 = TermSearch3.submit_search_query("id:#{term2.id.to_s.gsub(":", "\\:")}")["response"]["docs"].first
 
       assert_nil indexed_term
       assert_nil indexed_term2

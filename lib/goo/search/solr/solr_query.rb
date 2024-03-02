@@ -27,7 +27,7 @@ module SOLR
     end
 
     def delete_by_id(document_id, commit: true)
-      return  if document_id.nil?
+      return if document_id.nil?
 
       @solr.delete_by_id(document_id)
       @solr.commit if commit
@@ -37,12 +37,33 @@ module SOLR
       @solr.delete_by_query(query)
       @solr.commit
     end
+
     def search(query, params = {})
       params[:q] = query
       @solr.get('select', params: params)
     end
 
+    def submit_search_query(query, params = {})
+      uri = ::URI.parse("#{collection_url}/select")
+
+      http = Net::HTTP.new(uri.host, uri.port)
+      request = Net::HTTP::Post.new(uri.request_uri)
+
+      params[:q] = query
+      request.set_form_data(params)
+
+      response = http.request(request)
+
+      if response.is_a?(Net::HTTPSuccess)
+        JSON.parse(response.body)
+      else
+        puts "Error: #{response.code} - #{response.message}"
+        nil
+      end
+    end
+
     private
+
     def dynamic_field(type:, is_list:, is_fuzzy_search: false)
       return is_list ? '*_texts' : '*_text' if is_fuzzy_search
 

@@ -157,6 +157,10 @@ module Goo
         search_client(connection_name).search(q, params)
       end
 
+      def submit_search_query(query, params = {}, connection_name = search_collection_name)
+        search_client(connection_name).submit_search_query(query, params)
+      end
+
       def indexBatch(collection, connection_name = search_collection_name)
         docs = collection.map(&:indexable_object)
         search_client(connection_name).index_document(docs)
