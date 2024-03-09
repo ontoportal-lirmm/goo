@@ -1,6 +1,44 @@
 module SOLR
   module Query
 
+    def self.included(base)
+      base.extend(ClassMethods)
+    end
+
+    module ClassMethods
+      def index_document_attr(key, type, is_list, fuzzy_search)
+        dynamic_field(type: type, is_list: is_list, is_fuzzy_search: fuzzy_search).gsub('*', key.to_s)
+      end
+
+      private
+
+      def dynamic_field(type:, is_list:, is_fuzzy_search: false)
+        return is_list ? '*_texts' : '*_text' if is_fuzzy_search
+
+        dynamic_type = case type
+                       when :uri, :string, nil
+                         '*_t'
+                       when :integer
+                         '*_i'
+                       when :boolean
+                         '*_b'
+                       when :date_time
+                         '*_dt'
+                       when :float
+                         '*_f'
+                       else
+                         # Handle unknown data types or raise an error based on your specific requirements
+                         raise ArgumentError, "Unsupported ORM data type: #{type}"
+                       end
+
+        if is_list
+          dynamic_type = dynamic_type.eql?('*_t') ? "*_txt" : "#{dynamic_type}s"
+        end
+
+        dynamic_type
+      end
+    end
+
     def clear_all_data
       delete_by_query('*:*')
     end
@@ -23,8 +61,10 @@ module SOLR
     end
 
     def index_document_attr(key, type, is_list, fuzzy_search)
-      dynamic_field(type: type, is_list: is_list, is_fuzzy_search: fuzzy_search).gsub('*', key.to_s)
+      self.class.index_document_attr(key, type, is_list, fuzzy_search)
     end
+
+
 
     def delete_by_id(document_id, commit: true)
       return if document_id.nil?
@@ -62,33 +102,7 @@ module SOLR
       end
     end
 
-    private
 
-    def dynamic_field(type:, is_list:, is_fuzzy_search: false)
-      return is_list ? '*_texts' : '*_text' if is_fuzzy_search
-
-      dynamic_type = case type
-                     when :uri, :string, nil
-                       '*_t'
-                     when :integer
-                       '*_i'
-                     when :boolean
-                       '*_b'
-                     when :date_time
-                       '*_dt'
-                     when :float
-                       '*_f'
-                     else
-                       # Handle unknown data types or raise an error based on your specific requirements
-                       raise ArgumentError, "Unsupported ORM data type: #{type}"
-                     end
-
-      if is_list
-        dynamic_type = dynamic_type.eql?('*_t') ? "*_txt" : "#{dynamic_type}s"
-      end
-
-      dynamic_type
-    end
   end
 end
 

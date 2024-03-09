@@ -137,7 +137,7 @@ module Goo
       end
 
       def custom_schema?(connection_name = search_collection_name)
-        search_client(connection_name).custom_schema?
+        search_client(connection_name)&.custom_schema?
       end
 
       def schema_generator
@@ -150,7 +150,8 @@ module Goo
         type = self.datatype(key)
         is_list = self.list?(key)
         fuzzy = self.fuzzy_searchable?(key)
-        search_client.index_document_attr(key, type, is_list, fuzzy)
+
+        SOLR::SolrConnector.index_document_attr(key, type, is_list, fuzzy)
       end
 
       def search(q, params = {}, connection_name = search_collection_name)
