@@ -37,6 +37,23 @@ module Goo
         all_attributes = Set.new(klass.attributes(:all))
         @lang_filter = Goo::SPARQL::Solution::LanguageFilter.new
 
+        if @options[:page]
+          # for using prefixes before queries
+          # mdorf, 7/27/2023, AllegroGraph supplied a patch (rfe17161-7.3.1.fasl.patch)
+          # that enables implicit internal ordering. The patch requires the prefix below
+          select.prefix('franzOption_imposeImplicitBasicOrdering: <franz:yes>')
+          # mdorf, 1/24/2024, AllegroGraph 8 introduced a new feature that allows caching OFFSET/LIMIT queries
+          select.prefix('franzOption_allowCachingResults: <franz:yes>')
+        end
+
+        # for troubleshooting specific queries (write 1 of 3)
+        # ont_to_parse = 'OAE'
+        # sub_id = 171
+        # ont_to_parse = 'MONDO'
+        # sub_id = 55
+        # debug_file = "/srv/ncbo/repository/#{ont_to_parse}/#{sub_id}/#{ont_to_parse}_queries.txt"
+        # File.write(debug_file, select.to_s + "\n", mode: 'a') if select.to_s =~ /OFFSET \d+ LIMIT 2500$/
+
         select.each_solution do |sol|
           next if sol[:some_type] && klass.type_uri(collection) != sol[:some_type]
 
@@ -44,6 +61,9 @@ module Goo
 
           found.add(sol[:id])
           id = sol[:id]
+
+          # for troubleshooting specific queries (write 2 of 3)
+          # File.write(debug_file, id + "\n", mode: 'a') if select.to_s =~ /OFFSET \d+ LIMIT 2500$/
 
           if @bnode_extraction
             struct = create_struct(@bnode_extraction, klass, @models_by_id, sol, @variables)
@@ -85,10 +105,13 @@ module Goo
 
             object = object_to_array(id, @klass_struct, @models_by_id, object, v) if list_attributes.include?(v)
 
-            model_map_attributes_values(id, object, sol, v)
+            model_map_attributes_values(id, var_set_hash, @models_by_id, object, sol, v)
           end
         end
         @lang_filter.fill_models_with_other_languages(@models_by_id, list_attributes)
+
+        # for troubleshooting specific queries (write 3 of 3)
+        # File.write(debug_file, "\n\n", mode: 'a') if select.to_s =~ /OFFSET \d+ LIMIT 2500$/
 
         return @models_by_id if @bnode_extraction
 

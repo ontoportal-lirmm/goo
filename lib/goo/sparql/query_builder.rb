@@ -78,6 +78,14 @@ module Goo
         if @page
           offset = (@page[:page_i] - 1) * @page[:page_size]
           select.slice(offset, @page[:page_size])
+          # mdorf, 1/12/2023, AllegroGraph returns duplicate results across
+          # different pages unless the order_by clause is explicitly specified
+          # see https://github.com/ncbo/bioportal-project/issues/264
+          # However, using the .order call has added a significant overhead;
+          # therefore, a different solution is now being sought
+          # mdorf, 7/27/2023, AllegroGraph supplied a patch (rfe17161-7.3.1.fasl.patch)
+          # that enables implicit internal ordering, which addresses this issue
+          # select.order(:id)
         end
 
         select.distinct(true)
@@ -210,7 +218,20 @@ module Goo
           end
           filter_var = inspected_patterns[filter_pattern_match]
           if !filter_operation.value.instance_of?(Goo::Filter)
-            unless filter_operation.operator == :unbound || filter_operation.operator == :bound
+            case filter_operation.operator
+            when :unbound
+              filter_operations << "!BOUND(?#{filter_var.to_s})"
+              return :optional
+
+            when :bound
+              filter_operations << "BOUND(?#{filter_var.to_s})"
+              return :optional
+            when :regex
+              if filter_operation.value.is_a?(String)
+                filter_operations << "REGEX(STR(?#{filter_var.to_s}) , \"#{filter_operation.value.to_s}\")"
+              end
+
+            else
               value = RDF::Literal.new(filter_operation.value)
               if filter_operation.value.is_a? String
                 value = RDF::Literal.new(filter_operation.value, :datatype => RDF::XSD.string)
@@ -218,13 +239,6 @@ module Goo
               filter_operations << (
                 "?#{filter_var.to_s} #{sparql_op_string(filter_operation.operator)} " +
                   " #{value.to_ntriples}")
-            else
-              if filter_operation.operator == :unbound
-                filter_operations << "!BOUND(?#{filter_var.to_s})"
-              else
-                filter_operations << "BOUND(?#{filter_var.to_s})"
-              end
-              return :optional
             end
           else
             filter_operations << "#{sparql_op_string(filter_operation.operator)}"
@@ -254,9 +268,6 @@ module Goo
 
 
       def get_aggregate_vars(aggregate, collection, graphs, internal_variables, klass, optional_patterns, unions, variables)
-        # mdorf, 6/03/20 If aggregate projections (sub-SELECT within main SELECT) use an alias, that alias cannot appear in the main SELECT
-        # https://github.com/ncbo/goo/issues/106
-        # See last sentence in https://www.w3.org/TR/sparql11-query/#aggregateExample
         aggregate_vars = nil
         aggregate_projections = nil
         if aggregate
@@ -319,6 +330,9 @@ module Goo
 
       def get_select(aggregate_projections, variables, store)
         client = Goo.sparql_query_client(store)
+        # mdorf, 6/03/20 If aggregate projections (sub-SELECT within main SELECT) use an alias, that alias cannot appear in the main SELECT
+        # https://github.com/ncbo/goo/issues/106
+        # See last sentence in https://www.w3.org/TR/sparql11-query/#aggregateExample
         select_vars = variables.dup
         select_vars.reject! { |var| aggregate_projections.key?(var) } if aggregate_projections
         client.select(*select_vars).distinct()
