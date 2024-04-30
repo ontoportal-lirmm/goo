@@ -26,6 +26,19 @@ class TestCache < MiniTest::Unit::TestCase
     GooTestData.delete_test_case_data
   end
 
+  def test_cache_invalidate
+    address = Address.all.first
+    Goo.use_cache = true
+    puts "save 1"
+    University.new(name: 'test', address: [address]).save
+    u2 = University.new(name: 'test', address: [address])
+    puts "request 1"
+    refute u2.valid?
+    expected_error = { :name => { :duplicate => "There is already a persistent resource with id `http://goo.org/default/university/test`" } }
+    assert_equal expected_error, u2.errors
+    Goo.use_cache = false
+  end
+
   def test_cache_models
     redis = Goo.redis_client
     redis.flushdb
@@ -49,7 +62,7 @@ class TestCache < MiniTest::Unit::TestCase
     assert !key.nil?
     assert redis.exists(key)
 
-    
+
     prg = programs.first
     prg.bring_remaining
     prg.credits = 999
