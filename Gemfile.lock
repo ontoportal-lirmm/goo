@@ -1,12 +1,11 @@
 GIT
   remote: https://github.com/ontoportal-lirmm/sparql-client.git
-  revision: 180c818f7715baac64b2699bb452ef5c756f62c5
-  branch: master
+  revision: 04e904dbef4037e08e748574ab0f56d4f560a512
+  branch: feature/reset-to-upstream
   specs:
-    sparql-client (1.0.1)
-      json_pure (>= 1.4)
-      net-http-persistent (= 2.9.4)
-      rdf (>= 1.0)
+    sparql-client (3.2.2)
+      net-http-persistent (~> 4.0, >= 4.0.2)
+      rdf (~> 3.2, >= 3.2.11)
 
 PATH
   remote: .
@@ -57,25 +56,25 @@ GEM
       domain_name (~> 0.5)
     i18n (0.9.5)
       concurrent-ruby (~> 1.0)
-    json_pure (2.7.1)
     link_header (0.0.8)
     macaddr (1.7.2)
       systemu (~> 2.6.5)
-    method_source (1.0.0)
+    method_source (1.1.0)
     mime-types (3.5.2)
       mime-types-data (~> 3.2015)
-    mime-types-data (3.2024.0206)
+    mime-types-data (3.2024.0305)
     minitest (4.7.5)
     multi_json (1.15.0)
     mustermann (3.0.0)
       ruby2_keywords (~> 0.0.1)
-    net-http-persistent (2.9.4)
+    net-http-persistent (4.0.2)
+      connection_pool (~> 2.2)
     netrc (0.11.0)
     pry (0.14.2)
       coderay (~> 1.1)
       method_source (~> 1.0)
-    public_suffix (5.0.4)
-    rack (2.2.8.1)
+    public_suffix (5.0.5)
+    rack (2.2.9)
     rack-accept (0.4.5)
       rack (>= 0.4)
     rack-post-body-to-params (0.1.8)
@@ -83,7 +82,7 @@ GEM
     rack-protection (3.2.0)
       base64 (>= 0.1.0)
       rack (~> 2.2, >= 2.2.4)
-    rake (13.1.0)
+    rake (13.2.1)
     rdf (3.2.11)
       link_header (~> 0.0, >= 0.0.8)
     rdf-raptor (3.2.0)
@@ -99,9 +98,9 @@ GEM
     rdf-xsd (3.2.1)
       rdf (~> 3.2)
       rexml (~> 3.2)
-    redis (5.1.0)
-      redis-client (>= 0.17.0)
-    redis-client (0.20.0)
+    redis (5.2.0)
+      redis-client (>= 0.22.0)
+    redis-client (0.22.1)
       connection_pool
     request_store (1.6.0)
       rack (>= 1.4)
@@ -111,7 +110,7 @@ GEM
       mime-types (>= 1.16, < 4.0)
       netrc (~> 0.8)
     rexml (3.2.6)
-    rsolr (2.5.0)
+    rsolr (2.6.0)
       builder (>= 2.1.2)
       faraday (>= 0.9, < 3, != 2.0.0)
     ruby2_keywords (0.0.5)
@@ -163,4 +162,4 @@ DEPENDENCIES
   uuid
 
 BUNDLED WITH
-   2.2.33
+   2.4.22

@@ -117,24 +117,26 @@ module Goo
     opts = opts[0]
     @@sparql_backends = @@sparql_backends.dup
     @@sparql_backends[name] = opts
-    @@sparql_backends[name][:query]=Goo::SPARQL::Client.new(opts[:query],
-                 {protocol: "1.1", "Content-Type" => "application/x-www-form-urlencoded",
-                   read_timeout: 10000,
-                   validate: false,
-                   redis_cache: @@redis_client,
-                   cube_options: @@cube_options})
-    @@sparql_backends[name][:update]=Goo::SPARQL::Client.new(opts[:update],
-                 {protocol: "1.1", "Content-Type" => "application/x-www-form-urlencoded",
-                   read_timeout: 10000,
-                   validate: false,
-                   redis_cache: @@redis_client,
-                   cube_options: @@cube_options})
-    @@sparql_backends[name][:data]=Goo::SPARQL::Client.new(opts[:data],
-                 {protocol: "1.1", "Content-Type" => "application/x-www-form-urlencoded",
-                   read_timeout: 10000,
-                   validate: false,
-                   redis_cache: @@redis_client,
-                   cube_options: @@cube_options})
+    @@sparql_backends[name][:query] = Goo::SPARQL::Client.new(opts[:query],
+                                                              protocol: "1.1",
+                                                              headers: { "Content-Type" => "application/x-www-form-urlencoded", "Accept" => "application/sparql-results+json"},
+                                                              read_timeout: 10000,
+                                                              validate: false,
+                                                              redis_cache: @@redis_client)
+    @@sparql_backends[name][:update] = Goo::SPARQL::Client.new(opts[:update],
+                                                               protocol: "1.1",
+                                                               headers: { "Content-Type" => "application/x-www-form-urlencoded", "Accept" => "application/sparql-results+json"},
+                                                               read_timeout: 10000,
+                                                               validate: false,
+                                                               redis_cache: @@redis_client,
+                                                               cube_options: @@cube_options)
+    @@sparql_backends[name][:data] = Goo::SPARQL::Client.new(opts[:data],
+                                                             protocol: "1.1",
+                                                             headers: { "Content-Type" => "application/x-www-form-urlencoded", "Accept" => "application/sparql-results+json"},
+                                                             read_timeout: 10000,
+                                                             validate: false,
+                                                             redis_cache: @@redis_client,
+                                                             cube_options: @@cube_options)
     @@sparql_backends[name][:backend_name] = opts[:backend_name]
     @@sparql_backends.freeze
   end
@@ -255,7 +257,7 @@ module Goo
     yield self
     configure_sanity_check
 
-      init_search_connections
+    init_search_connections
 
     @@namespaces.freeze
     @@sparql_backends.freeze

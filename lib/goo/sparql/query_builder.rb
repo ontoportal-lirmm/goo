@@ -51,7 +51,9 @@ module Goo
           @query.filter(filter)
         end
 
-        @query.union(*@unions) unless @unions.empty?
+        Array(@unions).each do |union|
+          @query.union(*union)
+        end
 
         ids_filter(ids) if ids
 
