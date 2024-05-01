@@ -22,5 +22,5 @@ group :profiling do
   gem "thin"
 end
 
-gem 'sparql-client', github: 'ontoportal-lirmm/sparql-client', branch: 'feature/reset-to-upstream'
+gem 'sparql-client', github: 'ontoportal-lirmm/sparql-client', branch: 'development'
 gem 'faraday', '2.7.11' #unpin if we no more support ruby 2.7
