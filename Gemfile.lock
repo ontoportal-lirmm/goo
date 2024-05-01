@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/ontoportal-lirmm/sparql-client.git
-  revision: 04e904dbef4037e08e748574ab0f56d4f560a512
+  revision: c96da3ad479724a31ccd6217ab9939dddfaca40e
   branch: feature/reset-to-upstream
   specs:
     sparql-client (3.2.2)

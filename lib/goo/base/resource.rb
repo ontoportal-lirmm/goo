@@ -293,7 +293,7 @@ module Goo
               batch_file.write(lines.join(""))
               batch_file.flush()
             else
-              Goo.sparql_update_client.insert_data(graph_insert, graph: graph)
+              Goo.sparql_update_client.insert_data(graph_insert, graph: graph, use_insert_data: !Goo.backend_vo?)
             end
           rescue Exception => e
             raise e
