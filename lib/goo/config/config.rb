@@ -68,11 +68,13 @@ module Goo
     if @@sparql_backends[:main][:query].url.to_s["localhost"].nil?
       raise Exception, "only for testing"
     end
-    @@sparql_backends[:main][:query] = Goo::SPARQL::Client.new("http://#{@settings.goo_host}:#{@settings.goo_port}#{@settings.goo_path_query}",
-                                                             {protocol: "1.1", "Content-Type" => "application/x-www-form-urlencoded",
-                                                              read_timeout: 300,
-                                                              redis_cache: @@redis_client })
+    @@sparql_backends = {}
+    Goo.add_sparql_backend(:main,
+                            backend_name: @settings.goo_backend_name,
+                            query: "http://#{@settings.goo_host}:#{@settings.goo_port}#{@settings.goo_path_query}",
+                            data: "http://#{@settings.goo_host}:#{@settings.goo_port}#{@settings.goo_path_data}",
+                            update: "http://#{@settings.goo_host}:#{@settings.goo_port}#{@settings.goo_path_update}",
+                            options: { rules: :NONE })
   end
-
 
 end
