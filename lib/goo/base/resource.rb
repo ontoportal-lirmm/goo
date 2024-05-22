@@ -168,7 +168,11 @@ module Goo
         end
         @persistent = false
         @modified = true
-        self.class.load_inmutable_instances if self.class.inmutable? && self.class.inm_instances
+
+        if self.class.after_destroy?
+          self.class.call_after_destroy(self)
+        end
+
         return nil
       end
 
@@ -259,7 +263,7 @@ module Goo
 
         #call update callback before saving
         if callbacks
-          self.class.attributes_with_update_callbacks.each do |attr|
+          self.class.attributes_with_callbacks.each do |attr|
             Goo::Validators::Enforce.enforce_callbacks(self, attr)
           end
         end
@@ -289,7 +293,7 @@ module Goo
               batch_file.write(lines.join(""))
               batch_file.flush()
             else
-              Goo.sparql_update_client.insert_data(graph_insert, graph: graph)
+              Goo.sparql_update_client.insert_data(graph_insert, graph: graph, use_insert_data: !Goo.backend_vo?)
             end
           rescue Exception => e
             raise e
@@ -301,7 +305,11 @@ module Goo
 
         @modified_attributes = Set.new
         @persistent = true
-        self.class.load_inmutable_instances if self.class.inmutable? && self.class.inm_instances
+
+        if self.class.after_save?
+          self.class.call_after_save(self)
+        end
+
         return self
       end
 
@@ -377,25 +385,26 @@ module Goo
           next if inst.class.collection?(attr) #collection is already there
           next unless inst.respond_to?(attr)
           attr_uri = klass.attribute_uri(attr,inst.collection).to_s
-          if unmapped_string_keys.include?(attr_uri.to_s) ||
-            (equivalent_predicates && equivalent_predicates.include?(attr_uri))
-            if !unmapped_string_keys.include?(attr_uri)
-              object = Array(equivalent_predicates[attr_uri].map { |eq_attr| unmapped_string_keys[eq_attr] }).flatten.compact
-              if include_languages && [RDF::URI, Hash].all?{|c| object.map(&:class).include?(c)}
-                object = object.reduce({})  do |all, new_v|
-                  new_v =  { none: [new_v] } if new_v.is_a?(RDF::URI)
-                  all.merge(new_v) {|_, a, b| a + b }
+          if unmapped_string_keys.include?(attr_uri.to_s) || equivalent_predicates&.include?(attr_uri)
+            object = nil
+
+            if unmapped_string_keys.include?(attr_uri)
+              object = unmapped_string_keys[attr_uri]
+            else
+              equivalent_predicates[attr_uri].each do |eq_attr|
+                next if unmapped_string_keys[eq_attr].nil?
+
+                if object.nil?
+                  object = unmapped_string_keys[eq_attr].dup
+                elsif object.is_a?(Array)
+                  object.concat(unmapped_string_keys[eq_attr])
                 end
-              elsif include_languages
-                object = object.first
               end
 
               if object.nil?
                 inst.send("#{attr}=", list_attrs.include?(attr) ? [] : nil, on_load: true)
                 next
               end
-            else
-              object = unmapped_string_keys[attr_uri]
             end
 
             if object.is_a?(Hash)
@@ -425,11 +434,6 @@ module Goo
       def self.find(id, *options)
         id = RDF::URI.new(id) if !id.instance_of?(RDF::URI) && self.name_with == :id
         id = id_from_unique_attribute(name_with(),id) unless id.instance_of?(RDF::URI)
-        if self.inmutable? && self.inm_instances && self.inm_instances[id]
-          w = Goo::Base::Where.new(self)
-          w.instance_variable_set("@result", [self.inm_instances[id]])
-          return w
-        end
         options_load = { ids: [id], klass: self }.merge(options[-1] || {})
         options_load[:find] = true
         where = Goo::Base::Where.new(self)

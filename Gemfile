@@ -4,7 +4,6 @@ gemspec
 
 gem "activesupport"
 gem "cube-ruby", require: "cube"
-gem "faraday", '~> 1.9'
 gem "rake"
 gem "uuid"
 gem "request_store"
@@ -23,4 +22,5 @@ group :profiling do
   gem "thin"
 end
 
-gem 'sparql-client', github: 'ontoportal-lirmm/sparql-client', branch: 'master'
+gem 'sparql-client', github: 'ontoportal-lirmm/sparql-client', branch: 'development'
+gem 'faraday', '2.7.11' #unpin if we no more support ruby 2.7

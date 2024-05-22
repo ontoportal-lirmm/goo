@@ -1,6 +1,8 @@
 require "pry"
 require "rdf"
+require "rdf/vocab"
 require "rdf/ntriples"
+require "rdf/rdfxml"
 require "sparql/client"
 
 require "set"
@@ -12,6 +14,7 @@ require 'redis'
 require 'uuid'
 require "cube"
 
+require_relative "goo/config/config"
 require_relative "goo/sparql/sparql"
 require_relative "goo/search/search"
 require_relative "goo/base/base"
@@ -39,6 +42,7 @@ module Goo
   @@model_by_name = {}
   @@search_backends = {}
   @@search_connection = {}
+  @@search_collections = {}
   @@default_namespace = nil
   @@id_prefix = nil
   @@redis_client = nil
@@ -50,6 +54,31 @@ module Goo
   @@use_cache = false
 
   @@slice_loading_size = 500
+
+
+
+  def self.log_debug_file(str)
+    debug_file = "./queries.txt"
+    File.write(debug_file, str.to_s + "\n", mode: 'a')
+  end
+
+
+
+  def backend_4s?
+    sparql_backend_name.downcase.eql?("4store")
+  end
+
+  def backend_ag?
+    sparql_backend_name.downcase.eql?("allegrograph")
+  end
+
+  def backend_gb?
+    sparql_backend_name.downcase.eql?("graphdb")
+  end
+
+  def backend_vo?
+    sparql_backend_name.downcase.eql?("virtuoso")
+  end
 
 
   def self.main_languages
@@ -73,7 +102,7 @@ module Goo
   end
 
   def self.add_namespace(shortcut, namespace,default=false)
-    if !(namespace.instance_of? RDF::Vocabulary)
+    unless namespace.instance_of? RDF::Vocabulary
       raise ArgumentError, "Namespace must be a RDF::Vocabulary object"
     end
     @@namespaces[shortcut.to_sym] = namespace
@@ -88,36 +117,28 @@ module Goo
     opts = opts[0]
     @@sparql_backends = @@sparql_backends.dup
     @@sparql_backends[name] = opts
-    @@sparql_backends[name][:query]=Goo::SPARQL::Client.new(opts[:query],
-                 {protocol: "1.1", "Content-Type" => "application/x-www-form-urlencoded",
-                   read_timeout: 10000,
-                   validate: false,
-                   redis_cache: @@redis_client,
-                   cube_options: @@cube_options})
-    @@sparql_backends[name][:update]=Goo::SPARQL::Client.new(opts[:update],
-                 {protocol: "1.1", "Content-Type" => "application/x-www-form-urlencoded",
-                   read_timeout: 10000,
-                   validate: false,
-                   redis_cache: @@redis_client,
-                   cube_options: @@cube_options})
-    @@sparql_backends[name][:data]=Goo::SPARQL::Client.new(opts[:data],
-                 {protocol: "1.1", "Content-Type" => "application/x-www-form-urlencoded",
-                   read_timeout: 10000,
-                   validate: false,
-                   redis_cache: @@redis_client,
-                   cube_options: @@cube_options})
+    @@sparql_backends[name][:query] = Goo::SPARQL::Client.new(opts[:query],
+                                                              protocol: "1.1",
+                                                              headers: { "Content-Type" => "application/x-www-form-urlencoded", "Accept" => "application/sparql-results+json"},
+                                                              read_timeout: 10000,
+                                                              validate: false,
+                                                              redis_cache: @@redis_client)
+    @@sparql_backends[name][:update] = Goo::SPARQL::Client.new(opts[:update],
+                                                               protocol: "1.1",
+                                                               headers: { "Content-Type" => "application/x-www-form-urlencoded", "Accept" => "application/sparql-results+json"},
+                                                               read_timeout: 10000,
+                                                               validate: false,
+                                                               redis_cache: @@redis_client,
+                                                               cube_options: @@cube_options)
+    @@sparql_backends[name][:data] = Goo::SPARQL::Client.new(opts[:data],
+                                                             protocol: "1.1",
+                                                             headers: { "Content-Type" => "application/x-www-form-urlencoded", "Accept" => "application/sparql-results+json"},
+                                                             read_timeout: 10000,
+                                                             validate: false,
+                                                             redis_cache: @@redis_client,
+                                                             cube_options: @@cube_options)
     @@sparql_backends[name][:backend_name] = opts[:backend_name]
     @@sparql_backends.freeze
-  end
-
-  def self.test_reset
-    if @@sparql_backends[:main][:query].url.to_s["localhost"].nil?
-      raise Exception, "only for testing"
-    end
-    @@sparql_backends[:main][:query]=Goo::SPARQL::Client.new("http://localhost:9000/sparql/",
-                 {protocol: "1.1", "Content-Type" => "application/x-www-form-urlencoded",
-                   read_timeout: 300,
-                  redis_cache: @@redis_client })
   end
 
   def self.main_lang
@@ -234,11 +255,9 @@ module Goo
       raise ArgumentError, "Configuration needs to receive a code block"
     end
     yield self
-    configure_sanity_check()
+    configure_sanity_check
 
-    if @@search_backends.length > 0
-      @@search_backends.each { |name, val| @@search_connection[name] = RSolr.connect(url: search_conf(name), timeout: 1800, open_timeout: 1800) }
-    end
+    init_search_connections
 
     @@namespaces.freeze
     @@sparql_backends.freeze
@@ -262,8 +281,44 @@ module Goo
     return @@search_backends[name][:service]
   end
 
-  def self.search_connection(name=:main)
-    return @@search_connection[name]
+  def self.search_connection(collection_name)
+    return search_client(collection_name).solr
+  end
+
+  def self.search_client(collection_name)
+    @@search_connection[collection_name]
+  end
+
+  def self.add_search_connection(collection_name, search_backend = :main, &block)
+    @@search_collections[collection_name] = {
+      search_backend: search_backend,
+      block: block_given? ? block : nil
+    }
+  end
+
+  def self.search_connections
+    @@search_connection
+  end
+
+  def self.init_search_connection(collection_name, search_backend = :main,  block = nil, force: false)
+    return @@search_connection[collection_name] if @@search_connection[collection_name] && !force
+
+    @@search_connection[collection_name] = SOLR::SolrConnector.new(search_conf(search_backend), collection_name)
+    if block
+      block.call(@@search_connection[collection_name].schema_generator)
+      @@search_connection[collection_name].enable_custom_schema
+    end
+    @@search_connection[collection_name].init(force)
+    @@search_connection[collection_name]
+  end
+
+
+  def self.init_search_connections(force=false)
+    @@search_collections.each do |collection_name, backend|
+      search_backend = backend[:search_backend]
+      block =  backend[:block]
+      init_search_connection(collection_name, search_backend, block, force: force)
+    end
   end
 
   def self.sparql_query_client(name=:main)

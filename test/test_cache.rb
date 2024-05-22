@@ -1,7 +1,4 @@
 require_relative 'test_case'
-
-GooTest.configure_goo
-
 require_relative 'models'
 
 class TestCache < MiniTest::Unit::TestCase
@@ -29,6 +26,19 @@ class TestCache < MiniTest::Unit::TestCase
     GooTestData.delete_test_case_data
   end
 
+  def test_cache_invalidate
+    address = Address.all.first
+    Goo.use_cache = true
+    puts "save 1"
+    University.new(name: 'test', address: [address]).save
+    u2 = University.new(name: 'test', address: [address])
+    puts "request 1"
+    refute u2.valid?
+    expected_error = { :name => { :duplicate => "There is already a persistent resource with id `http://goo.org/default/university/test`" } }
+    assert_equal expected_error, u2.errors
+    Goo.use_cache = false
+  end
+
   def test_cache_models
     redis = Goo.redis_client
     redis.flushdb
@@ -52,7 +62,7 @@ class TestCache < MiniTest::Unit::TestCase
     assert !key.nil?
     assert redis.exists(key)
 
-    
+
     prg = programs.first
     prg.bring_remaining
     prg.credits = 999
@@ -103,7 +113,7 @@ class TestCache < MiniTest::Unit::TestCase
     data = "<http://goo.org/default/student/Tim> " +
            "<http://goo.org/default/enrolled> " +
            "<http://example.org/program/Stanford/BioInformatics> ."
-    
+
     Goo.sparql_data_client.append_triples(Student.type_uri,data,"application/x-turtle")
     programs = Program.where(name: "BioInformatics", university: [ name: "Stanford"  ])
                           .include(:students).all
@@ -131,11 +141,16 @@ class TestCache < MiniTest::Unit::TestCase
     def x.response *args
       raise Exception, "Should be a successful hit"
     end
-    programs = Program.where(name: "BioInformatics", university: [ name: "Stanford"  ])
-                        .include(:students).all
+    begin
+      programs = Program.where(name: "BioInformatics", university: [ name: "Stanford"  ])
+                          .include(:students).all
+    rescue  Exception
+      assert false, "should be cached"
+    end
+
     #from cache
-    assert programs.length == 1
-    assert_raises Exception do 
+    assert_equal 1, programs.length
+    assert_raises Exception do
       #different query
       programs = Program.where(name: "BioInformatics X", university: [ name: "Stanford"  ]).all
     end

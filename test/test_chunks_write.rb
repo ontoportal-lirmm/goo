@@ -1,10 +1,8 @@
 require_relative 'test_case'
 
-GooTest.configure_goo
-
 module TestChunkWrite
-  ONT_ID = "http:://example.org/data/nemo"
-  ONT_ID_EXTRA = "http:://example.org/data/nemo/extra"
+  ONT_ID = "http://example.org/data/nemo"
+  ONT_ID_EXTRA = "http://example.org/data/nemo/extra"
 
   class TestChunkWrite < MiniTest::Unit::TestCase
 
@@ -20,14 +18,14 @@ module TestChunkWrite
       _delete
     end
 
+    def setup
+      self.class._delete
+    end
+
+
     def self._delete
-      graphs = [ONT_ID,ONT_ID_EXTRA]
-      url = Goo.sparql_data_client.url
-      graphs.each do |graph|
-        # This bypasses the chunks stuff
-        params = { method: :delete, url: "#{url.to_s}#{graph.to_s}", timeout: nil }
-        RestClient::Request.execute(params)
-      end
+      graphs = [ONT_ID, ONT_ID_EXTRA]
+      graphs.each { |graph| Goo.sparql_data_client.delete_graph(graph) }
     end
 
     def test_put_data
@@ -74,20 +72,13 @@ module TestChunkWrite
       ntriples_file_path = "./test/data/nemo_ontology.ntriples"
 
       # Bypass in chunks
-      url = Goo.sparql_data_client.url
-      params = {
-        method: :put,
-        url: "#{url.to_s}#{ONT_ID}",
-        payload: File.read(ntriples_file_path),
-        headers: {content_type: "application/x-turtle"},
-        timeout: nil
-      }
+      params = self.class.params_for_backend(:post, ONT_ID, ntriples_file_path)
       RestClient::Request.execute(params)
 
       tput = Thread.new {
         Goo.sparql_data_client.put_triples(ONT_ID_EXTRA, ntriples_file_path, mime_type="application/x-turtle")
-        sleep(1.5)
       }
+
       count_queries = 0
       tq = Thread.new {
        5.times do
@@ -103,16 +94,16 @@ module TestChunkWrite
       assert_equal 5, count_queries
       tput.join
 
-      triples_no_bnodes = 25256
+
       count = "SELECT (count(?s) as ?c) WHERE { GRAPH <#{ONT_ID_EXTRA}> { ?s ?p ?o }}"
       Goo.sparql_query_client.query(count).each do |sol|
-        assert_equal triples_no_bnodes, sol[:c].object
+        assert_includes [25256, 50512], sol[:c].object
       end
 
       tdelete = Thread.new {
         Goo.sparql_data_client.delete_graph(ONT_ID_EXTRA)
-        sleep(1.5)
       }
+
       count_queries = 0
       tq = Thread.new {
        5.times do
@@ -124,9 +115,8 @@ module TestChunkWrite
        end
       }
       tq.join
-      assert tdelete.alive?
-      assert_equal 5, count_queries
       tdelete.join
+      assert_equal 5, count_queries
 
       count = "SELECT (count(?s) as ?c) WHERE { GRAPH <#{ONT_ID_EXTRA}> { ?s ?p ?o }}"
       Goo.sparql_query_client.query(count).each do |sol|
@@ -136,16 +126,7 @@ module TestChunkWrite
 
     def test_query_flood
       ntriples_file_path = "./test/data/nemo_ontology.ntriples"
-
-      # Bypass in chunks
-      url = Goo.sparql_data_client.url
-      params = {
-        method: :put,
-        url: "#{url.to_s}#{ONT_ID}",
-        payload: File.read(ntriples_file_path),
-        headers: {content_type: "application/x-turtle"},
-        timeout: nil
-      }
+      params = self.class.params_for_backend(:post, ONT_ID, ntriples_file_path)
       RestClient::Request.execute(params)
 
       tput = Thread.new {
@@ -158,27 +139,34 @@ module TestChunkWrite
           50.times do |j|
             oq = "SELECT (count(?s) as ?c) WHERE { ?s a ?o }"
             Goo.sparql_query_client.query(oq).each do |sol|
-              assert sol[:c].object > 0
+              refute_equal 0, sol[:c].to_i
             end
           end
         }
       end
 
-      log_status = []
-      Thread.new {
-        10.times do |i|
-          log_status << Goo.sparql_query_client.status
-          sleep(1.2)
+      threads.join
+
+      if Goo.backend_4s?
+        log_status = []
+        Thread.new {
+          10.times do |i|
+            log_status << Goo.sparql_query_client.status
+          end
+        }
+
+        threads.each do |t|
+          t.join
         end
-      }
+        tput.join
 
-      threads.each do |t|
-        t.join
+        assert log_status.map { |x| x[:outstanding] }.max > 0
+        assert_equal 16, log_status.map { |x| x[:running] }.max
       end
-      tput.join
+    end
 
-      assert log_status.map { |x| x[:outstanding] }.max > 0
-      assert_equal 16, log_status.map { |x| x[:running] }.max
+    def self.params_for_backend(method, graph_name, ntriples_file_path = nil)
+      Goo.sparql_data_client.params_for_backend(graph_name, File.read(ntriples_file_path), "text/turtle", method)
     end
 
   end

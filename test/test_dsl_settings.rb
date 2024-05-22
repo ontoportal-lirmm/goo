@@ -1,6 +1,5 @@
 require_relative 'test_case'
 
-GooTest.configure_goo
 
 class NewPersonModel < Goo::Base::Resource
   model :person_model_new, name_with: :name
@@ -64,7 +63,7 @@ class YamlSchemeModelTest < Goo::Base::Resource
 end
 
 
-class TestDSLSeeting < MiniTest::Unit::TestCase
+class TestDSLSetting < MiniTest::Unit::TestCase
   def initialize(*args)
     super(*args)
   end

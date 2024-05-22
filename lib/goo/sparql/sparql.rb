@@ -8,3 +8,4 @@ require_relative "client"
 require_relative "triples"
 require_relative "loader"
 require_relative "queries"
+require_relative 'processor'

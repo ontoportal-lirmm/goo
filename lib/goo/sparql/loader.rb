@@ -36,63 +36,48 @@ module Goo
         ##
         def model_load_sliced(*options)
           options = options.last
-          ids = options[:ids]
           klass = options[:klass]
           incl = options[:include]
           models = options[:models]
-          aggregate = options[:aggregate]
-          read_only = options[:read_only]
           collection = options[:collection]
-          count = options[:count]
-          include_pagination = options[:include_pagination]
-          equivalent_predicates = options[:equivalent_predicates]
-          predicates = options[:predicates]
 
-          embed_struct, klass_struct = get_structures(aggregate, count, incl, include_pagination, klass, read_only)
-
-          raise_resource_must_persistent_error(models) if models
+          embed_struct, klass_struct = get_structures(options[:aggregate],  options[:count] , incl, options[:include_pagination], klass, options[:read_only])
+          raise_not_persistent_error(models) if models
 
           graphs = get_graphs(collection, klass)
-          ids, models_by_id = get_models_by_id_hash(ids, klass, klass_struct, models)
+          models_by_id = get_models_by_id_hash( options[:ids], klass, klass_struct, models)
 
-          query_options = {}
           #TODO: breaks the reasoner
           patterns = [[:id, RDF.type, klass.uri_type(collection)]]
 
           incl_embed = nil
-          unmapped = nil
           bnode_extraction = nil
           properties_to_include = []
           variables = [:id]
-          if incl
-            if incl.first && incl.first.is_a?(Hash) && incl.first.include?(:bnode)
+          if incl && !incl.empty?
+            if incl.first.is_a?(Hash) && incl.first.include?(:bnode)
               #limitation only one level BNODE
               bnode_extraction, patterns, variables = get_bnode_extraction(collection, incl, klass, patterns)
             else
               variables = %i[id attributeProperty attributeObject]
               if incl.first == :unmapped
-                unmapped = true
-                properties_to_include = predicate_map(predicates)
+                properties_to_include = predicate_map(options[:predicates])
               else
-                #make it deterministic
-                incl_embed = get_embed_includes(incl)
-                graphs, properties_to_include, query_options = get_includes(collection, graphs, incl,
-                                                             klass, query_options)
+                graphs, properties_to_include, incl_embed = get_includes(collection, graphs, incl, klass)
               end
             end
           end
 
-          expand_equivalent_predicates(properties_to_include, equivalent_predicates)
 
-          query_builder = Goo::SPARQL::QueryBuilder.new options
-          select, aggregate_projections = query_builder.build_select_query(ids, variables, graphs,
-                                                                           patterns, query_options,
-                                                                           properties_to_include)
+          options[:properties_to_include] = properties_to_include
+
+
+          select, aggregate_projections = Goo::SPARQL::QueryBuilder.new(options)
+                                                                   .build_query(models_by_id.keys, variables, graphs, patterns)
 
           solution_mapper = Goo::SPARQL::SolutionMapper.new aggregate_projections, bnode_extraction,
                                                             embed_struct, incl_embed, klass_struct, models_by_id,
-                                                            properties_to_include, unmapped,
-                                                            variables, ids, options
+                                                            variables, options
 
           solution_mapper.map_each_solutions(select)
         end
@@ -102,16 +87,6 @@ module Goo
         def set_request_lang(options)
           options[:requested_lang] = RequestStore.store[:requested_lang]
         end
-        def expand_equivalent_predicates(properties_to_include, eq_p)
-
-          return unless eq_p && !eq_p.empty?
-
-          properties_to_include&.each do |property_attr, property|
-            property_uri = property[:uri]
-            property[:equivalents] = eq_p[property_uri.to_s].to_a.map { |p| RDF::URI.new(p) } if eq_p.include?(property_uri.to_s)
-          end
-
-        end
 
         def predicate_map(predicates)
           predicates_map = nil
@@ -120,10 +95,11 @@ module Goo
             predicates_map = {}
             uniq_p.each do |p|
               i = 0
-              key = ('var_' + p.last_part + i.to_s).to_sym
+              last_part = p.to_s.include?("#") ? p.to_s.split('#').last : p.to_s.split('/').last
+              key = ('var_' + last_part + i.to_s).to_sym
               while predicates_map.include?(key)
                 i += 1
-                key = ('var_' + p.last_part + i.to_s).to_sym
+                key = ('var_' + last_part + i.to_s).to_sym
                 break if i > 10
               end
               predicates_map[key] = { uri: p, is_inverse: false }
@@ -132,19 +108,19 @@ module Goo
           predicates_map
         end
 
-        def get_includes(collection, graphs, incl, klass, query_options)
+        def get_includes(collection, graphs, incl, klass)
+          incl_embed ,incl = get_embed_includes(incl)
           incl = incl.to_a
           incl.delete_if { |a| !a.instance_of?(Symbol) }
           properties_to_include = {}
           incl.each do |attr|
             graph, pattern = query_pattern(klass, attr, collection: collection)
-            add_rules(attr, klass, query_options)
             if klass.attributes(:all).include?(attr)
               properties_to_include[attr] = { uri: pattern[1], is_inverse: klass.inverse?(attr) } # [property_attr, property_uri , inverse: true]
             end
             graphs << graph if graph && (!klass.collection_opts || klass.inverse?(attr))
           end
-          [graphs, properties_to_include,query_options]
+          [graphs, properties_to_include, incl_embed]
         end
 
         def get_bnode_extraction(collection, incl, klass, patterns)
@@ -181,7 +157,7 @@ module Goo
             #a where without models
 
           end
-          return ids, models_by_id
+          models_by_id
         end
 
         def get_graphs(collection, klass)
@@ -234,7 +210,7 @@ module Goo
           [embed_struct, klass_struct]
         end
 
-        def raise_resource_must_persistent_error(models)
+        def raise_not_persistent_error(models)
           models.each do |m|
             if (not m.nil?) && !m.respond_to?(:klass) #read only
               raise ArgumentError,
@@ -252,7 +228,7 @@ module Goo
             #variables.concat(embed_variables)
             incl.concat(embed_variables)
           end
-          incl_embed
+          [incl_embed, incl]
         end
       end
 
