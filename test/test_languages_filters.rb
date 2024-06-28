@@ -78,6 +78,7 @@ class TestLanguageFilter < MiniTest::Unit::TestCase
     RequestStore.store[:requested_lang] = [:fr, :en]
     person = ExamplePerson.find(@@person_id).in(@@db).include(:label).first
     assert_equal expected_result.values.flatten.sort.sort, person.label.sort
+    assert_equal expected_result, person.label(include_languages: true)
   end
 
 
