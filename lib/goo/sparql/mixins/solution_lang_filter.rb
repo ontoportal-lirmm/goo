@@ -50,9 +50,9 @@ module Goo
 
         def set_value(model, predicate, value, &block)
           language = object_language(value)
-          
-          if requested_lang.eql?(:ALL) || !literal?(value) || (language_match?(language) && can_add_new_value(model,predicate, language))
-              block.call
+
+          if requested_lang.eql?(:ALL) || !literal?(value) || (language_match?(language) && can_add_new_value?(model,predicate, language))
+            block.call
           end
 
           if requested_lang.eql?(:ALL) || requested_lang.is_a?(Array)
@@ -62,7 +62,7 @@ module Goo
         end
 
 
-        def  can_add_new_value(model, predicate, new_language)
+        def  can_add_new_value?(model, predicate, new_language)
           old_val = model.send(predicate) rescue nil
           list_attributes?(predicate) || old_val.blank? || !no_lang?(new_language)
         end
@@ -70,7 +70,7 @@ module Goo
         def no_lang?(language)
           language.nil? || language.eql?(:no_lang)
         end
-        
+
         def model_group_by_lang(model)
           unmapped = model.unmapped
           cpy = {}
@@ -86,9 +86,9 @@ module Goo
 
           return values.to_a if values.all?{|x| x.is_a?(RDF::URI) || !x.respond_to?(:language) }
 
-          values = values.group_by { |x| x.respond_to?(:language) && x.language ? x.language.to_s.downcase : :none }
+          values = values.group_by { |x| x.respond_to?(:language) && x.language ? x.language.to_s.downcase.to_sym : "@none" }
 
-          no_lang = values[:none] || []
+          no_lang = values["@none"] || []
           return no_lang if !no_lang.empty? && no_lang.all? { |x| x.respond_to?(:plain?) && !x.plain? }
 
           values
@@ -103,9 +103,9 @@ module Goo
           # no_lang means that the object is not a literal
           return true if language.eql?(:no_lang)
 
-          return requested_lang.include?(language)  if requested_lang.is_a?(Array)
+          return requested_lang.include?(language.upcase)  if requested_lang.is_a?(Array)
 
-          language&.upcase.eql?(requested_lang)
+          language.upcase.eql?(requested_lang)
         end
 
         def literal?(object)
@@ -114,7 +114,7 @@ module Goo
 
         def store_objects_by_lang(id, predicate, object, language)
           # store objects in this format: [id][predicate][language] = [objects]
-          return if requested_lang.is_a?(Array) && !requested_lang.include?(language)
+          return if requested_lang.is_a?(Array) && !requested_lang.include?(language.upcase) && !language.eql?('@none')
 
           language_key = language.downcase
 
@@ -172,7 +172,9 @@ module Goo
 
         def get_language(languages)
           languages = portal_language if languages.nil? || languages.empty?
-          lang = languages.to_s.split(',').map { |l| l.upcase.to_sym }
+          lang = languages
+          lang = languages.to_s.split(',') unless lang.is_a?(Array)
+          lang = lang.map { |l| l.upcase.to_sym }
           lang.length == 1 ? lang.first : lang
         end
 
