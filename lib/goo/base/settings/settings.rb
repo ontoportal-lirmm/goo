@@ -85,7 +85,7 @@ module Goo
         end
 
         def uuid_uri_generator(inst)
-          model_name_uri = model_name.to_s
+          model_name_uri = model_name.to_s.downcase
           model_name_uri = model_name_uri.pluralize if Goo.pluralize_models?
           if Goo.id_prefix
             return RDF::URI.new(Goo.id_prefix + model_name_uri + '/' + Goo.uuid)
@@ -169,7 +169,7 @@ module Goo
         def not_show_all_languages?(values, args)
           values.is_a?(Hash) && !show_all_languages?(args)
         end
-        
+
       end
     end
   end
