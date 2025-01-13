@@ -149,9 +149,9 @@ module Goo
 
         raise ArgumentError, "This object is not persistent and cannot be deleted" if !@persistent
 
-        if !fully_loaded?
+        unless fully_loaded?
           missing = missing_load_attributes
-          options_load = { models: [ self ], klass: self.class, :include => missing }
+          options_load = { models: [self], klass: self.class, :include => missing }
           options_load[:collection] = self.collection if self.class.collection_opts
           Goo::SPARQL::Queries.model_load(options_load)
         end
