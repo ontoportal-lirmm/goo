@@ -188,6 +188,7 @@ module Goo
         end
 
         def attribute_uri(attr, *args)
+          attr = attr.to_sym
           if attr == :id
             raise ArgumentError, ":id cannot be treated as predicate for .where, use find "
           end

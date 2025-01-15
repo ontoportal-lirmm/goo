@@ -8,10 +8,10 @@ module Goo
       def self.duplicate_attribute_value?(model,attr,store=:main)
         value = model.instance_variable_get("@#{attr}")
         if !value.instance_of? Array
-          so = Goo.sparql_query_client(store).ask.from(model.graph).
-            whether([:id, model.class.attribute_uri(attr), value]).
+          so = Goo.sparql_query_client(store).select(:id).from(model.graph).
+            where([:id, model.class.attribute_uri(attr), value]).
             filter("?id != #{model.id.to_ntriples}")
-          return so.true?
+          return !so.solutions.empty?
         else
           #not yet support for unique arrays
         end
@@ -45,11 +45,12 @@ module Goo
 
       def self.model_exist(model,id=nil,store=:main)
         id = id || model.id
-        so = Goo.sparql_query_client(store).ask.from(model.graph).
-          whether([id, RDF.type, model.class.uri_type(model.collection)])
-        return so.true?
-      end
+        so = Goo.sparql_query_client(store).select(:id).from(model.graph).
+          where([:id, RDF.type, model.class.uri_type(model.collection)])
+                .filter("?id = #{id.to_ntriples}")
 
+        return !so.solutions.empty?
+      end
 
       def self.model_load(*options)
         Goo::SPARQL::Loader.model_load(*options)

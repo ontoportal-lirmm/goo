@@ -257,6 +257,7 @@ module Goo
     yield self
     configure_sanity_check
 
+    
     init_search_connections
 
     @@namespaces.freeze
@@ -410,4 +411,3 @@ end
 Goo::Filter = Goo::Base::Filter
 Goo::Pattern = Goo::Base::Pattern
 Goo::Collection = Goo::Base::Collection
-
