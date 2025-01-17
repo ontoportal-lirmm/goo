@@ -112,7 +112,7 @@ module Goo
         else
           bnodes_filter, dir = bnodes_filter_file(file_path, mime_type_in)
         end
-        chunk_lines = 10_000 # number of line
+        chunk_lines = 50_000 # number of line
         file = File.foreach(bnodes_filter)
         lines = []
         line_count = 0
