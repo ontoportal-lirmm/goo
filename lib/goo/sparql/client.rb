@@ -112,12 +112,19 @@ module Goo
         else
           bnodes_filter, dir = bnodes_filter_file(file_path, mime_type_in)
         end
-        chunk_lines = 50_000 # number of line
+
+        if Goo.backend_vo? || Goo.backend_ag?
+          chunk_lines = 50_000 # number of line
+        else
+          chunk_lines = 500_000 # number of line
+        end
+
         file = File.foreach(bnodes_filter)
         lines = []
         line_count = 0
         file.each_entry do |line|
           lines << line
+
           if lines.size == chunk_lines
             response = append_triples_batch(graph, lines, mime_type_in, line_count)
             line_count += lines.size
