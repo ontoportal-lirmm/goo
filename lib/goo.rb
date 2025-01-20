@@ -191,6 +191,10 @@ module Goo
     @@query_logging_file = value
   end
 
+  def self.logger
+    return @@sparql_backends[:main][:query].logger
+  end
+
   def self.add_search_backend(name, *opts)
     opts = opts[0]
     unless opts.include? :service

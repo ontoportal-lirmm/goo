@@ -28,3 +28,5 @@ projectFilesBackup/*
 
 config/config.rb
 queries.txt
+
+*.iml
