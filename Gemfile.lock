@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/ontoportal-lirmm/sparql-client.git
-  revision: 24bccbd0f4a5150fa6ce2af50d7c378c681027ea
+  revision: d4737ff08f33517cf93b4d82c78a471017991d97
   branch: development
   specs:
     sparql-client (3.2.2)
