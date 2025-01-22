@@ -14,10 +14,10 @@ module Goo
 
         def fill_models_with_all_languages(models_by_id)
           objects_by_lang.each do |id, predicates|
+
             model = models_by_id[id]
             predicates.each do |predicate, values|
-
-              if values.values.all? { |v| v.all? { |x| literal?(x) && x.plain?} }
+              if values.values.any? { |v| v.all? { |x| literal?(x) && x.plain?} }
                 pull_stored_values(model, values, predicate, @unmapped)
               end
             end
@@ -142,10 +142,10 @@ module Goo
             add_unmapped_to_model(model, predicate, values)
           else
             values = values.map do  |language, values_literals|
-              values_string = values_literals.map{|x| x.object}
+              values_string = values_literals.select{|x| literal?(x) && x.plain?}.map{|x| x.object}
               values_string = values_string.first unless list_attributes?(predicate)
               [language, values_string]
-            end.to_h
+            end.to_h.reject { |_key, value| value.empty? }
 
             model.send("#{predicate}=", values, on_load: true)
           end
