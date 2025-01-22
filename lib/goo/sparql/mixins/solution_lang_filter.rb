@@ -17,7 +17,9 @@ module Goo
 
             model = models_by_id[id]
             predicates.each do |predicate, values|
-              if values.values.any? { |v| v.all? { |x| literal?(x) && x.plain?} }
+
+              if values.values.any? { |v| v.any? { |x| literal?(x) && x.plain?} }
+
                 pull_stored_values(model, values, predicate, @unmapped)
               end
             end
