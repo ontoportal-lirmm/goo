@@ -260,13 +260,13 @@ module Goo
         options.each do |opt|
           if opt.instance_of?(Symbol)
             if @klass.handler?(opt)
-              raise ArgumentError, "Method based attribute cannot be included"
+              next
             end
           end
           if opt.instance_of?(Hash)
             opt.each do |k,v|
               if @klass.handler?(k)
-                raise ArgumentError, "Method based attribute cannot be included"
+                next
               end
             end
           end
