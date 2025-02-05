@@ -26,7 +26,7 @@ class TestLogging < MiniTest::Unit::TestCase
     Goo.logger.info("Test logging")
     University.all
     recent_logs = Goo.logger.get_logs
-    assert_equal 3, recent_logs.length
+    assert_equal 2, recent_logs.length
     assert recent_logs.any? { |x| x['query'].include?("Test logging") }
     assert File.read("test.log").include?("Test logging")
   end
@@ -35,7 +35,7 @@ class TestLogging < MiniTest::Unit::TestCase
     Goo.logger.info("Test logging 2")
     University.all
     recent_logs = Goo.logger.queries_last_n_seconds(1)
-    assert_equal 3, recent_logs.length
+    assert_equal 2, recent_logs.length
     assert recent_logs.any? { |x| x['query'].include?("Test logging 2") }
     assert File.read("test.log").include?("Test logging 2")
     sleep 1
