@@ -246,7 +246,7 @@ module Goo
         end
 
         if !batch_file
-          return self if not modified?
+          return self if !modified?  && persistent?
           raise Goo::Base::NotValidException, "Object is not valid. Check errors." unless valid?
         end
 
