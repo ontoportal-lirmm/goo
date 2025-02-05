@@ -255,7 +255,8 @@ module Goo
           self.class.attributes_with_defaults.each do |attr|
             value = self.send("#{attr}")
             if value.nil?
-              value = self.class.default(attr).call(self)
+              value = self.class.default(attr)
+              value = value.call(self) if value.is_a?(Proc)
               self.send("#{attr}=", value)
             end
           end

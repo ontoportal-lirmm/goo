@@ -9,3 +9,22 @@ nationality:
   enforcedValues: {'fr': 'france', 'us': 'USA'}
 
 
+test_string:
+  default: "Test String"
+
+test_integer:
+  default: 2
+
+test_list:
+  default:
+    - item1
+    - item2
+
+test_float:
+  default: 3.14
+
+test_uri:
+  default: https://example.com/term1
+
+test_boolean:
+  default: false
