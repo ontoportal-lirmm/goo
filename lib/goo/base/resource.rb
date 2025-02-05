@@ -179,13 +179,13 @@ module Goo
       def bring(*opts)
         opts.each do |k|
           if k.kind_of?(Hash)
-            k.each do |k2,v|
-              raise ArgumentError, "Unable to bring a method based attr #{k2}" if self.class.handler?(k2)
-              self.instance_variable_set("@#{k2}",nil)
+            k.each do |k2,_|
+              instance_variable_set("@#{k2}", nil)
+              send(k2) if self.class.handler?(k2)
             end
           else
-            raise ArgumentError, "Unable to bring a method based attr #{k}" if self.class.handler?(k)
-            self.instance_variable_set("@#{k}",nil)
+            instance_variable_set("@#{k}", nil)
+            send(k) if self.class.handler?(k)
           end
         end
         query = self.class.where.models([self]).include(*opts)
