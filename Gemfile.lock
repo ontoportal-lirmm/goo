@@ -50,24 +50,26 @@ GEM
     coderay (1.1.3)
     concurrent-ruby (1.3.5)
     connection_pool (2.5.0)
-    cube-ruby (0.0.3)
     daemons (1.4.1)
     date (3.4.1)
     docile (1.4.1)
     domain_name (0.6.20240107)
     eventmachine (1.2.7)
-    faraday (2.7.11)
-      base64
-      faraday-net_http (>= 2.0, < 3.1)
-      ruby2_keywords (>= 0.0.4)
-    faraday-net_http (3.0.2)
-    ffi (1.17.1)
+    faraday (2.12.2)
+      faraday-net_http (>= 2.0, < 3.5)
+      json
+      logger
+    faraday-net_http (3.4.0)
+      net-http (>= 0.5.0)
+    ffi (1.17.1-arm64-darwin)
+    ffi (1.17.1-x86_64-linux-gnu)
     htmlentities (4.3.4)
     http-accept (1.7.0)
     http-cookie (1.0.8)
       domain_name (~> 0.5)
     i18n (0.9.5)
       concurrent-ruby (~> 1.0)
+    json (2.9.1)
     link_header (0.0.8)
     logger (1.6.5)
     macaddr (1.7.2)
@@ -84,6 +86,8 @@ GEM
     net-ftp (0.3.8)
       net-protocol
       time
+    net-http (0.6.0)
+      uri
     net-http-persistent (4.0.5)
       connection_pool (~> 2.2)
     net-protocol (0.2.2)
@@ -92,7 +96,7 @@ GEM
     pry (0.15.2)
       coderay (~> 1.1)
       method_source (~> 1.0)
-    public_suffix (5.1.1)
+    public_suffix (6.0.1)
     rack (2.2.10)
     rack-accept (0.4.5)
       rack (>= 0.4)
@@ -157,23 +161,20 @@ GEM
       date
     timeout (0.4.3)
     tzinfo (0.3.62)
+    uri (1.0.2)
     uuid (2.3.9)
       macaddr (~> 1.0)
 
 PLATFORMS
   arm64-darwin-24
-  x86_64-darwin-23
   x86_64-linux
 
 DEPENDENCIES
   activesupport
-  cube-ruby
-  faraday (= 2.7.11)
   goo!
   minitest (< 5.0)
   net-ftp
   pry
-  public_suffix (~> 5.1.1)
   rack-accept
   rack-post-body-to-params
   rake
@@ -187,4 +188,4 @@ DEPENDENCIES
   uuid
 
 BUNDLED WITH
-   2.4.22
+   2.6.3

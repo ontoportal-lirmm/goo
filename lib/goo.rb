@@ -12,7 +12,6 @@ require 'rsolr'
 require 'rest_client'
 require 'redis'
 require 'uuid'
-require "cube"
 
 require_relative "goo/config/config"
 require_relative "goo/sparql/sparql"
@@ -46,7 +45,6 @@ module Goo
   @@default_namespace = nil
   @@id_prefix = nil
   @@redis_client = nil
-  @@cube_options = nil
   @@namespaces = {}
   @@pluralize_models = false
   @@uuid = UUID.new
@@ -130,15 +128,13 @@ module Goo
                                                                headers: { "Content-Type" => "application/x-www-form-urlencoded", "Accept" => "application/sparql-results+json"},
                                                                read_timeout: 10000,
                                                                validate: false,
-                                                               redis_cache: @@redis_client,
-                                                               cube_options: @@cube_options)
+                                                               redis_cache: @@redis_client)
     @@sparql_backends[name][:data] = Goo::SPARQL::Client.new(opts[:data],
                                                              protocol: "1.1",
                                                              headers: { "Content-Type" => "application/x-www-form-urlencoded", "Accept" => "application/sparql-results+json"},
                                                              read_timeout: 10000,
                                                              validate: false,
-                                                             redis_cache: @@redis_client,
-                                                             cube_options: @@cube_options)
+                                                             redis_cache: @@redis_client)
     @@sparql_backends[name][:backend_name] = opts[:backend_name]
     @@sparql_backends.freeze
   end
