@@ -15,7 +15,7 @@ Goo.config do |config|
   # config.goo_path_data     = "/repositories/ontoportal/statements/"
   # config.goo_path_update   = "/repositories/ontoportal/statements/"
 
-  config.search_server_url   = 'http://localhost:8983/solr/term_search_core1'
+  config.search_server_url   = 'http://localhost:8983/solr/'
   config.redis_host          = 'localhost'
   config.redis_port          = 6379
   config.bioportal_namespace = 'http://data.bioontology.org/'
