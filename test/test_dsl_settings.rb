@@ -60,6 +60,13 @@ class YamlSchemeModelTest < Goo::Base::Resource
   attribute :friends, enforce: [ :existence , PersonModel]
   attribute :status, enforce: [ :existence, :status ],
             default: lambda { |record| StatusModel.find("single") }
+
+  attribute :test_string, enforce: [:string]
+  attribute :test_integer, enforce: [:integer]
+  attribute :test_list, enforce: [:list]
+  attribute :test_float, enforce: [:float]
+  attribute :test_uri, enforce: [:uri]
+  attribute :test_boolean, enforce: [:boolean]
 end
 
 
@@ -82,6 +89,36 @@ class TestDSLSetting < MiniTest::Unit::TestCase
     assert_equal nil, person.created
   end
 
+  def test_model_with_yaml_scheme
+
+    settings = YamlSchemeModelTest.model_settings
+    attributes_settings = settings[:attributes]
+
+
+    assert_equal "test/data/yaml_scheme_model_test.yml", settings[:scheme]
+
+    assert_equal 'Name', attributes_settings[:name][:label]
+    assert_equal 'Person name', attributes_settings[:name][:description]
+    assert_equal %w[test:name test2:name test3:person_name], attributes_settings[:name][:equivalents]
+    assert_equal 'Put the person name as string', attributes_settings[:name][:help]
+    assert_equal 'John', attributes_settings[:name][:example]
+
+
+    assert_equal 'Person nationality', attributes_settings[:nationality][:label]
+    hash = {fr: 'france', us: 'USA'}
+    assert_equal hash, attributes_settings[:nationality][:enforcedValues]
+  end
+
+  def test_default_value_with_yaml_scheme
+    settings = YamlSchemeModelTest.model_settings
+    attributes_settings = settings[:attributes]
+    assert_equal 'Test String', attributes_settings[:test_string][:default]
+    assert_equal 2, attributes_settings[:test_integer][:default]
+    assert_equal ["item1", "item2"], attributes_settings[:test_list][:default]
+    assert_equal 3.14, attributes_settings[:test_float][:default]
+    assert_equal "https://example.com/term1", attributes_settings[:test_uri][:default]
+    assert_equal false, attributes_settings[:test_boolean][:default]
+  end
 
   private
   def _test_attributes_enforce(model)
@@ -187,25 +224,5 @@ class TestDSLSetting < MiniTest::Unit::TestCase
     assert !person.valid?
   end
 
-  def test_model_with_yaml_scheme
-
-    settings = YamlSchemeModelTest.model_settings
-    attributes_settings = settings[:attributes]
-
-
-    assert_equal "test/data/yaml_scheme_model_test.yml", settings[:scheme]
-
-    assert_equal 'Name', attributes_settings[:name][:label]
-    assert_equal 'Person name', attributes_settings[:name][:description]
-    assert_equal %w[test:name test2:name test3:person_name], attributes_settings[:name][:equivalents]
-    assert_equal 'Put the person name as string', attributes_settings[:name][:help]
-    assert_equal 'John', attributes_settings[:name][:example]
-
-
-    assert_equal 'Person nationality', attributes_settings[:nationality][:label]
-    hash = {fr: 'france', us: 'USA'}
-    assert_equal hash, attributes_settings[:nationality][:enforcedValues]
-
-  end
 
 end

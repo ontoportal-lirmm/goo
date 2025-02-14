@@ -24,11 +24,14 @@ module Goo
     @settings.redis_host          ||= ENV['REDIS_HOST'] || 'localhost'
     @settings.redis_port          ||= ENV['REDIS_PORT'] || 6379
     @settings.bioportal_namespace ||= ENV['BIOPORTAL_NAMESPACE'] || 'http://data.bioontology.org/'
+    @settings.query_logging       ||= ENV['QUERIES_LOGGING'] || false
+    @settings.query_logging_file  ||= ENV['QUERIES_LOGGING_FILE'] || './sparql.log'
     @settings.queries_debug       ||= ENV['QUERIES_DEBUG'] || false
-    @settings.slice_loading_size  ||= ENV['GOO_SLICES'] || 500
+    @settings.slice_loading_size  ||= ENV['GOO_SLICES']&.to_i || 500
     puts "(GOO) >> Using RDF store (#{@settings.goo_backend_name}) #{@settings.goo_host}:#{@settings.goo_port}#{@settings.goo_path_query}"
     puts "(GOO) >> Using term search server at #{@settings.search_server_url}"
     puts "(GOO) >> Using Redis instance at #{@settings.redis_host}:#{@settings.redis_port}"
+    puts "(GOO) >> Using Query logging: #{@settings.query_logging_file}" if @settings.query_logging
 
     connect_goo
   end
@@ -42,9 +45,10 @@ module Goo
                                 query: "http://#{@settings.goo_host}:#{@settings.goo_port}#{@settings.goo_path_query}",
                                 data: "http://#{@settings.goo_host}:#{@settings.goo_port}#{@settings.goo_path_data}",
                                 update: "http://#{@settings.goo_host}:#{@settings.goo_port}#{@settings.goo_path_update}",
-                                options: { rules: :NONE })
+                                options: { rules: :NONE})
         conf.add_search_backend(:main, service: @settings.search_server_url)
         conf.add_redis_backend(host: @settings.goo_redis_host, port: @settings.goo_redis_port)
+        conf.add_query_logger(enabled: @settings.query_logging, file: @settings.query_logging_file)
 
         conf.add_namespace(:omv, RDF::Vocabulary.new("http://omv.org/ontology/"))
         conf.add_namespace(:skos, RDF::Vocabulary.new("http://www.w3.org/2004/02/skos/core#"))
@@ -58,6 +62,7 @@ module Goo
         conf.add_namespace(:nemo, RDF::Vocabulary.new("http://purl.bioontology.org/NEMO/ontology/NEMO_annotation_properties.owl#"))
         conf.add_namespace(:bioportal, RDF::Vocabulary.new(@settings.bioportal_namespace))
         conf.use_cache = false
+        conf.slice_loading_size = @settings.slice_loading_size
       end
     rescue StandardError => e
       abort("EXITING: Goo cannot connect to triplestore and/or search server:\n  #{e}\n#{e.backtrace.join("\n")}")

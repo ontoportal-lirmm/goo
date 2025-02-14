@@ -17,7 +17,7 @@ module Goo
 
       connection_name ||= self.class.search_collection_name
       unindex(connection_name)
-      self.class.search_client(connection_name).index_document(document)
+      self.class.search_client(connection_name)&.index_document(document)
     end
 
     def index_update(attributes_to_update, connection_name = nil, to_set = nil)
@@ -45,7 +45,7 @@ module Goo
 
     def unindex(connection_name = nil)
       connection_name ||= self.class.search_collection_name
-      self.class.search_client(connection_name).delete_by_id(index_id)
+      self.class.search_client(connection_name)&.delete_by_id(index_id)
     end
 
     # default implementation, should be overridden by child class
@@ -173,11 +173,11 @@ module Goo
       end
 
       def unindexByQuery(query, connection_name = search_collection_name)
-        search_client(connection_name).delete_by_query(query)
+        search_client(connection_name)&.delete_by_query(query)
       end
 
       def indexCommit(attrs = nil, connection_name = search_collection_name)
-        search_client(connection_name).index_commit(attrs)
+        search_client(connection_name)&.index_commit(attrs)
       end
 
       def indexOptimize(attrs = nil, connection_name = search_collection_name)

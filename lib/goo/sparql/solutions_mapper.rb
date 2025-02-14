@@ -28,8 +28,17 @@ module Goo
         objects_new = {}
         list_attributes = Set.new(@klass.attributes(:list))
 
-        @lang_filter = Goo::SPARQL::Solution::LanguageFilter.new(requested_lang: @options[:requested_lang].to_s, unmapped: @unmapped,
-                                                                 list_attributes: list_attributes)
+        @lang_filter = Goo::SPARQL::Solution::LanguageFilter.new(requested_lang: @options[:requested_lang], unmapped: @unmapped,
+           list_attributes: list_attributes)
+        
+        if @options[:page]
+          # for using prefixes before queries
+          # mdorf, 7/27/2023, AllegroGraph supplied a patch (rfe17161-7.3.1.fasl.patch)
+          # that enables implicit internal ordering. The patch requires the prefix below
+          select.prefix('franzOption_imposeImplicitBasicOrdering: <franz:yes>')
+          # mdorf, 1/24/2024, AllegroGraph 8 introduced a new feature that allows caching OFFSET/LIMIT queries
+          select.prefix('franzOption_allowCachingResults: <franz:yes>')
+        end
 
         select.each_solution do |sol|
 

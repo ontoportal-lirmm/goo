@@ -149,9 +149,9 @@ module Goo
 
         raise ArgumentError, "This object is not persistent and cannot be deleted" if !@persistent
 
-        if !fully_loaded?
+        unless fully_loaded?
           missing = missing_load_attributes
-          options_load = { models: [ self ], klass: self.class, :include => missing }
+          options_load = { models: [self], klass: self.class, :include => missing }
           options_load[:collection] = self.collection if self.class.collection_opts
           Goo::SPARQL::Queries.model_load(options_load)
         end
@@ -179,13 +179,13 @@ module Goo
       def bring(*opts)
         opts.each do |k|
           if k.kind_of?(Hash)
-            k.each do |k2,v|
-              raise ArgumentError, "Unable to bring a method based attr #{k2}" if self.class.handler?(k2)
-              self.instance_variable_set("@#{k2}",nil)
+            k.each do |k2,_|
+              instance_variable_set("@#{k2}", nil)
+              send(k2) if self.class.handler?(k2)
             end
           else
-            raise ArgumentError, "Unable to bring a method based attr #{k}" if self.class.handler?(k)
-            self.instance_variable_set("@#{k}",nil)
+            instance_variable_set("@#{k}", nil)
+            send(k) if self.class.handler?(k)
           end
         end
         query = self.class.where.models([self]).include(*opts)
@@ -246,7 +246,7 @@ module Goo
         end
 
         if !batch_file
-          return self if not modified?
+          return self if !modified?  && persistent?
           raise Goo::Base::NotValidException, "Object is not valid. Check errors." unless valid?
         end
 
@@ -255,7 +255,8 @@ module Goo
           self.class.attributes_with_defaults.each do |attr|
             value = self.send("#{attr}")
             if value.nil?
-              value = self.class.default(attr).call(self)
+              value = self.class.default(attr)
+              value = value.call(self) if value.is_a?(Proc)
               self.send("#{attr}=", value)
             end
           end

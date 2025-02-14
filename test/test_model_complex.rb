@@ -98,19 +98,26 @@ class TestModelComplex < MiniTest::Unit::TestCase
     x.id = RDF::URI.new "http://someiri.org/term/x"
     x.prefLabel = "x"
     x.save
-    assert_raises ArgumentError do
-      y = Term.find(x.id).in(sub).include(:methodBased).first
-    end
+    # Chech the methodBased is not included
+    y = Term.find(x.id).in(sub).include(:methodBased).first
+    assert_kind_of TestComplex::Term, y
+    refute y.loaded_attributes.include?(:methodBased)
+    
     assert_raises ArgumentError do
       y = Term.find(x.id).in(sub).include(methodBased: [:prefLabel]).first
     end
-    assert_raises ArgumentError do
-      y = Term.where.in(sub).include(:methodBased).all
-    end
+  
+    # Chech there is result and the methodBased is not included
+    y = Term.where.in(sub).include(:methodBased).all
+    assert_kind_of Array, y
+    refute_empty y
+    assert_kind_of TestComplex::Term, y.first
+    refute y.first.loaded_attributes.include?(:methodBased)
+    
+    # Chech the methodBased is brought by the bring
     y = Term.find(x.id).in(sub).first
-    assert_raises ArgumentError do
-      y.bring(:methodBased)
-    end
+    y.bring(:methodBased)
+    assert_includes y.loaded_attributes.to_a, :methodBased
     y.delete
     sub.delete
   end

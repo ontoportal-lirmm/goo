@@ -168,8 +168,26 @@ module Goo
         return rclient.llen(final_key)
       end
 
+      def paginated_all(page_size=1000)
+        page = 1
+        page_size = 10000
+        result = []
+        old_count = -1
+        count = 0
+        while count != old_count
+          old_count = count
+          @page_i = page
+          @page_size = page_size
+          result += process_query(count=false)
+          page += 1
+          count = result.length
+        end
+        result
+      end
+
       def all
-        process_query unless @result
+        return @result if @result
+        process_query
         @result
       end
       alias_method :to_a, :all
@@ -242,13 +260,13 @@ module Goo
         options.each do |opt|
           if opt.instance_of?(Symbol)
             if @klass.handler?(opt)
-              raise ArgumentError, "Method based attribute cannot be included"
+              next
             end
           end
           if opt.instance_of?(Hash)
             opt.each do |k,v|
               if @klass.handler?(k)
-                raise ArgumentError, "Method based attribute cannot be included"
+                next
               end
             end
           end

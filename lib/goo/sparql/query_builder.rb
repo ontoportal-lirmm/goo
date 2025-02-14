@@ -159,7 +159,7 @@ module Goo
         filter_id = []
 
         ids.each do |id|
-          filter_id << "?id = #{id.to_ntriples.to_s.gsub(' ', '%20')}"
+          filter_id << "?id = #{id.to_ntriples.to_s.gsub(' ', '%20').gsub("\\u0020", '%20')}"
         end
         filter_id_str = filter_id.join ' || '
         @query.filter filter_id_str
@@ -391,7 +391,7 @@ module Goo
               end
               filter_operations << (
                 "#{filter_var.to_s} #{sparql_op_string(filter_operation.operator)} " +
-                  " #{value.to_ntriples}")
+                  " #{value.to_ntriples.to_s.gsub("\\u0020", "%20")}")
             end
 
           end
