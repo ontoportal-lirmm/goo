@@ -234,7 +234,7 @@ module Goo
           # for some reason \\\\ breaks parsing
           params[:payload][:data] = params[:payload][:data].split("\n").map { |x| x.sub("\\\\", "") }.join("\n")
         elsif Goo.backend_vo?
-          params[:url] = "http://localhost:8890/sparql-graph-crud?graph=#{CGI.escape(graph.to_s)}"
+          params[:url] = "#{url.parent}/sparql-graph-crud?graph=#{CGI.escape(graph.to_s)}"
           params[:payload] = data_file
         else
           params[:url] << "?context=#{CGI.escape("<#{graph.to_s}>")}"
